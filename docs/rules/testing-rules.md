@@ -2,11 +2,26 @@
 
 상태: 확정
 
-## 단위 테스트
+## Repository 테스트
 
-- Presenter의 이벤트 처리와 `UiState` 전이를 우선 검증한다.
-- TODO 입력 검증, Reminder 시각 계산과 필터 AND 조건을 검증한다.
-- 성공, 빈 데이터, 유효성 실패, 저장소 실패와 중복 요청을 포함한다.
+- Entity↔Domain 변환, DAO 호출과 데이터 저장·조회를 검증한다.
+- Category 삭제·재정렬 등 기존 DB transaction 사용을 검증한다.
+- Room/SQLite 예외가 내부 구현 그대로 노출되지 않고 데이터 계층 오류로 변환되는지 검증한다.
+
+## Application Service 테스트
+
+- 비즈니스 규칙과 `TodoValidator`, `CategoryValidator`, `ReminderValidator` 적용을 검증한다.
+- 여러 Repository 호출 및 데이터 변경 순서와 Todo/Reminder 유스케이스 조합을 검증한다.
+- 유효하지 않은 상태에서는 Repository 변경이 호출되지 않는지 검증한다.
+- 시스템 Category 보호와 Category 순서 정책을 검증한다.
+- 가능한 경우 Fake Repository를 사용한 순수 JVM Unit Test로 작성한다.
+
+## Presenter 테스트
+
+- 사용자 이벤트, Application Service 호출과 `UiState` 전이를 검증한다.
+- 성공, 빈 데이터, Service 검증 실패, 비즈니스 오류와 중복 요청을 포함한다.
+- Service 결과가 사용자 표시 오류로 변환되는지 검증한다.
+- 실제 Room이나 Repository 구현을 사용하지 않고 Fake Service를 사용한다.
 - 시간, dispatcher와 시스템 스케줄러는 테스트 가능한 경계로 분리한다.
 
 ## DAO 테스트
@@ -39,6 +54,7 @@
 - Exact 사용 가능 시 Exact, 불가 시 Inexact fallback
 - 알림 권한 없음과 예약 실패 시 저장 유지 및 안내
 - 재부팅 시 미래 Reminder만 복구
+- Service 테스트에서는 Fake Repository와 Fake AlarmScheduler로 저장·예약 순서 및 부분 실패 정책을 검증한다.
 
 ## 완료 기준
 

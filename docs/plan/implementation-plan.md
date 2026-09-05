@@ -12,7 +12,8 @@
 - 계측 환경이 없으면 미실행 범위를 기록하고 다음 Phase로 넘기기 전에 빌드와 JVM 테스트를 통과시킨다.
 - Room을 영속 데이터의 Source of Truth로 사용한다.
 - 논리 구조는 MVP이며 AndroidX ViewModel은 Presenter의 생명주기 기반으로 사용한다.
-- Hilt/Koin 없이 constructor injection, Application 수준 `AppContainer`와 ViewModel Factory를 사용한다.
+- 의존 방향은 Compose View→Presenter→Application Service→Repository→DAO/Room으로 유지한다.
+- Hilt/Koin 없이 constructor injection을 사용하며 `AppContainer`가 Repository와 Application Service를 조립하고 ViewModel Factory는 Service를 주입한다.
 - 사용자 노출 문자열은 리소스로 관리한다.
 - 요구사항에 없는 기능, Network DTO 및 불필요한 모델 계층을 추가하지 않는다.
 - 각 Phase 완료 보고에는 변경 파일, 충족 요구사항, 실행한 테스트, 결과와 남은 제한을 기록한다.
@@ -214,13 +215,13 @@
 
 ### 목적
 
-Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이터 접근 경계를 만든다.
+Application Service가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이터 접근 경계를 만든다.
 
 ### 구현 대상
 
 - Todo, Category, Reminder Repository 계약과 Room 구현
 - DB transaction의 Domain API
-- Application 수준 수동 의존성 조립 기반
+- 데이터 계층 오류 변환
 
 ### 생성 또는 수정할 예상 파일
 
@@ -230,10 +231,7 @@ Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이
 - `app/src/main/java/com/example/todoapplication/data/repository/RoomTodoRepository.kt`
 - `app/src/main/java/com/example/todoapplication/data/repository/RoomCategoryRepository.kt`
 - `app/src/main/java/com/example/todoapplication/data/repository/RoomReminderRepository.kt`
-- `app/src/main/java/com/example/todoapplication/app/AppContainer.kt`
-- `app/src/main/java/com/example/todoapplication/app/DefaultAppContainer.kt`
 - `app/src/test/java/com/example/todoapplication/data/repository/*Test.kt`
-- `app/src/test/java/com/example/todoapplication/test/Fake*Repository.kt`
 
 ### 의존하는 이전 Phase
 
@@ -245,8 +243,9 @@ Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이
 - Todo 관찰·등록·수정·삭제·완료 변경 계약을 제공한다.
 - Category 관찰·생성·수정·삭제·재정렬 계약을 제공한다.
 - Reminder 저장·조회·삭제와 미래 Reminder 조회 계약을 제공한다.
-- 실패를 Presenter가 사용자 상태로 변환할 수 있는 명시적 경계로 전달한다.
+- Room/SQLite 실패를 상위 계층이 해석할 수 있는 데이터 계층 오류로 변환한다.
 - Hilt/Koin 없이 constructor injection을 사용한다.
+- Service 유스케이스, Validator 호출, 여러 Repository 조합과 비즈니스 작업 순서는 구현하지 않는다.
 
 ### 테스트 항목
 
@@ -254,7 +253,7 @@ Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이
 - 저장, 조회, 수정, 삭제와 실패 전달
 - Category 삭제·재정렬 transaction 호출
 - Flow 관찰 및 구독 갱신
-- fake Repository의 성공·실패 제어
+- Room/SQLite 오류의 데이터 계층 오류 변환
 - `./gradlew testDebugUnitTest`
 - `./gradlew connectedDebugAndroidTest`
 
@@ -262,16 +261,86 @@ Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이
 
 - 상위 계층에 DAO와 Entity가 노출되지 않는다.
 - Repository 테스트가 성공·실패 및 Flow 갱신을 검증한다.
-- `AppContainer`가 Database와 Repository를 수동 조립할 수 있다.
+- Repository abstraction이 Room 구현과 분리되고 데이터 계층 오류 계약이 정의되어 있다.
 
 ### 해당 Phase에서 수정하면 안 되는 범위
 
 - 화면별 Presenter와 UiState
+- Application Service, Validator 호출과 유스케이스 조합
+- `AppContainer` 및 ViewModel Factory 조립
 - Compose 화면 및 Navigation
 - 시스템 알람 및 알림 권한
 - 요구되지 않은 remote/network 계층
 
-## Phase 4: TODO 목록 Presenter 및 UiState
+## Phase 4: Application Service
+
+### 목적
+
+UI와 저장소 사이의 Todo, Category와 Reminder 사용자 유스케이스 및 비즈니스 흐름을 Android UI 없이 실행 가능한 경계로 만든다.
+
+### 구현 대상
+
+- `TodoService`, `CategoryService`, `ReminderService`
+- 기존 Domain Validator 연계
+- 하나 또는 여러 Repository 조합과 비즈니스 수준 결과
+- Application 수준 수동 의존성 조립
+- Fake Repository 기반 Service 단위 테스트
+
+### 생성 또는 수정할 예상 파일
+
+- `app/src/main/java/com/example/todoapplication/application/service/TodoService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/DefaultTodoService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/CategoryService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/DefaultCategoryService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/ReminderService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/DefaultReminderService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/ServiceResult.kt`
+- `app/src/main/java/com/example/todoapplication/app/AppContainer.kt`
+- `app/src/main/java/com/example/todoapplication/app/DefaultAppContainer.kt`
+- `app/src/test/java/com/example/todoapplication/application/service/*Test.kt`
+- `app/src/test/java/com/example/todoapplication/test/Fake*Repository.kt`
+
+### 의존하는 이전 Phase
+
+- Phase 3
+
+### 구현 상세
+
+- Presenter는 `TodoService`, `CategoryService`, `ReminderService` 계약에 의존하고 각 `Default*Service`가 유스케이스를 구현한다.
+- `DefaultTodoService`는 Todo 등록·수정·삭제·완료 변경·날짜별 조회와 `TodoValidator` 적용을 담당한다.
+- `DefaultCategoryService`는 생성·수정·삭제·순서 변경, 시스템 Category 보호와 `CategoryValidator` 적용을 담당한다.
+- `DefaultReminderService`는 Reminder 등록·교체·삭제와 `ReminderValidator` 적용을 담당한다.
+- 유효성 검증에 실패하면 Repository 변경을 호출하지 않는다.
+- 여러 Repository가 필요한 유스케이스의 호출 순서와 부분 실패 정책을 Service에 캡슐화한다.
+- Category 삭제 및 재정렬의 DB transaction 내부 절차는 다시 구현하지 않고 Repository의 원자적 API를 호출한다.
+- Service는 Domain Model과 Repository abstraction만 사용하며 Compose, Android UI, DAO, RoomDatabase와 Room Entity에 의존하지 않는다.
+- `AppContainer`가 Database/DAO→Repository→Service를 constructor injection으로 조립한다.
+
+### 테스트 항목
+
+- 세 Validator의 적용과 유효성 실패 시 Repository 미호출
+- Todo, Category와 Reminder 성공·실패 유스케이스
+- 시스템 Category 수정·삭제 방지와 순서 정책
+- 여러 Repository 호출 순서 및 오류 시 후속 호출 중단 여부
+- Category transaction API 위임 및 Service에서 내부 절차를 재구현하지 않음
+- Fake Repository 기반 `./gradlew testDebugUnitTest`
+- `./gradlew assembleDebug`
+
+### 완료 조건
+
+- Presenter가 사용할 세 Service 계약과 구현이 준비되어 있다.
+- 비즈니스 규칙과 Validator가 Service 단위 테스트로 검증된다.
+- 상위 계층에 DAO, RoomDatabase, Room Entity와 내부 SQLite 예외가 노출되지 않는다.
+- `AppContainer`가 Repository와 Service를 수동 조립한다.
+
+### 해당 Phase에서 수정하면 안 되는 범위
+
+- Presenter, UiState와 ViewModel Factory
+- Compose 화면 및 Navigation
+- DAO transaction 내부 구현 변경
+- AlarmScheduler, Notification과 Android 권한 구현
+
+## Phase 5: TODO 목록 Presenter 및 UiState
 
 ### 목적
 
@@ -296,13 +365,13 @@ Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이
 
 ### 의존하는 이전 Phase
 
-- Phase 3
+- Phase 4
 
 ### 구현 상세
 
 - 초기 `selectedDate`를 Clock 기준 오늘로 설정한다.
 - 이전/다음 날짜 및 DatePicker 선택 날짜 이벤트를 처리한다.
-- Repository의 정렬된 Todo Flow를 불변 `StateFlow<UiState>`로 노출한다.
+- `TodoService`의 정렬된 Todo Flow를 불변 `StateFlow<UiState>`로 노출한다.
 - 완료/미완료 변경을 처리하고 저장 실패 시 UI와 DB 상태를 일치시킨다.
 - 날짜 빈 상태, 로딩과 조회 오류를 구분한다.
 - 이 Phase에서는 Category/미완료 필터를 적용하지 않는다.
@@ -319,18 +388,19 @@ Presenter가 DAO/Entity를 알지 않고 Domain 모델만 사용하도록 데이
 
 ### 완료 조건
 
-- Presenter가 Activity, Composable, NavController와 DAO에 의존하지 않는다.
+- Presenter가 Activity, Composable, NavController, Repository, DAO와 Room에 의존하지 않고 Service만 사용한다.
 - 날짜와 완료 상태의 주요 상태 전이 테스트가 통과한다.
 - 앱은 기존 화면 상태로 계속 빌드된다.
 
 ### 해당 Phase에서 수정하면 안 되는 범위
 
 - Compose 제품 화면과 Navigation
+- Repository 직접 호출 및 Presenter 내부 비즈니스 검증
 - Todo 등록/수정
 - Category 관리와 필터
 - Reminder, Notification과 Alarm
 
-## Phase 5: TODO 목록 Compose UI
+## Phase 6: TODO 목록 Compose UI
 
 ### 목적
 
@@ -361,7 +431,7 @@ Todo 목록 Presenter 상태를 렌더링하는 첫 제품 화면과 최소 Navi
 
 ### 의존하는 이전 Phase
 
-- Phase 4
+- Phase 5
 
 ### 구현 상세
 
@@ -394,7 +464,7 @@ Todo 목록 Presenter 상태를 렌더링하는 첫 제품 화면과 최소 Navi
 - Category/미완료 필터
 - Reminder와 시스템 알람
 
-## Phase 6: TODO 등록 / 수정
+## Phase 7: TODO 등록 / 수정
 
 ### 목적
 
@@ -426,16 +496,16 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 
 ### 의존하는 이전 Phase
 
-- Phase 5
+- Phase 6
 
 ### 구현 상세
 
 - 신규 화면은 진입 날짜를 기본 날짜로 사용한다.
 - Category 미선택 시 시스템 `일반` ID를 적용하고 Category 없는 Todo 저장을 막는다.
 - 과거 날짜와 시간을 허용한다.
-- 수정 화면에는 Todo ID만 전달하고 Repository에서 다시 조회한다.
-- 저장 직전 검증, 중복 저장 방지와 실패 시 편집값 유지를 구현한다.
-- TODO 삭제는 AlertDialog 확인 후 수행하고 Todo/Reminder 관계 삭제를 Repository에 위임한다.
+- 수정 화면에는 Todo ID만 전달하고 `TodoService`에서 다시 조회한다.
+- 저장 직전 최종 검증은 Service에 위임하고 Presenter는 중복 저장 방지와 실패 시 편집값 유지를 구현한다.
+- TODO 삭제는 AlertDialog 확인 후 수행하고 Todo/Reminder 비즈니스 흐름은 Service에 위임한다.
 - 성공 이동과 메시지는 재구성 시 중복되지 않게 처리한다.
 
 ### 테스트 항목
@@ -461,7 +531,7 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 - 복합 필터
 - Reminder 선택, Notification과 Alarm
 
-## Phase 7: Category 관리
+## Phase 8: Category 관리
 
 ### 목적
 
@@ -489,16 +559,16 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 
 ### 의존하는 이전 Phase
 
-- Phase 6
+- Phase 7
 
 ### 구현 상세
 
 - `일반`과 사용자 Category를 저장 순서로 관찰한다.
-- 공백 및 전체 Category 이름 중복을 차단한다.
-- 신규 Category는 현재 마지막 `sortOrder`로 저장한다.
-- `일반`의 이름 수정·삭제를 Presenter와 Repository 양쪽에서 차단한다.
+- 공백 및 전체 Category 이름 중복의 최종 검증은 `CategoryService`가 수행한다.
+- 신규 Category의 마지막 `sortOrder` 결정은 `CategoryService`가 Repository 조회와 저장을 조합한다.
+- `일반`의 이름 수정·삭제는 `CategoryService`에서 차단하고 Repository/Room 제약도 방어선으로 유지한다.
 - 사용자 Category 삭제 AlertDialog에 연결 Todo가 삭제되지 않고 `일반`로 변경됨을 안내한다.
-- Category 색상 값은 상태와 저장 계약에 포함하되 팔레트 UI 및 재정렬 UI는 Phase 8에서 완성한다.
+- Category 색상 값은 상태와 저장 계약에 포함하되 팔레트 UI 및 재정렬 UI는 Phase 9에서 완성한다.
 
 ### 테스트 항목
 
@@ -522,7 +592,7 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 - TODO 필터
 - Reminder와 시스템 알람
 
-## Phase 8: Category 정렬 및 색상
+## Phase 9: Category 정렬 및 색상
 
 ### 목적
 
@@ -550,12 +620,12 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 
 ### 의존하는 이전 Phase
 
-- Phase 7
+- Phase 8
 
 ### 구현 상세
 
 - `일반`은 `sortOrder 0`으로 최상단에 고정하고 drag handle을 표시하지 않는다.
-- 사용자 Category끼리만 이동시키고 결과를 `1..N`으로 재계산해 하나의 transaction으로 저장한다.
+- 사용자 Category끼리만 이동시키고 `CategoryService`가 결과를 `1..N`으로 재계산해 Repository의 원자적 순서 저장 API를 호출한다.
 - 작은 원형 버튼에서 8개 사전 정의 팔레트를 열어 색상을 선택한다.
 - 자유 RGB/HEX 입력은 제공하지 않고 같은 색상 중복 사용을 허용한다.
 - `NEUTRAL` 등 Domain enum을 UI의 구체적인 Material 색상으로 매핑한다.
@@ -584,7 +654,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - Reminder와 Notification
 - 자유 색상 입력 또는 팔레트 외 색상
 
-## Phase 9: TODO 필터
+## Phase 10: TODO 필터
 
 ### 목적
 
@@ -593,6 +663,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 ### 구현 대상
 
 - 필터 DAO/Repository 계약
+- TodoService 필터 조회 계약
 - TodoList UiState/Event/Presenter 필터 상태
 - Category 필터 및 미완료 UI
 - 필터 빈 상태
@@ -602,6 +673,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - `app/src/main/java/com/example/todoapplication/data/local/dao/TodoDao.kt`
 - `app/src/main/java/com/example/todoapplication/domain/repository/TodoRepository.kt`
 - `app/src/main/java/com/example/todoapplication/data/repository/RoomTodoRepository.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/TodoService.kt`
 - `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListUiState.kt`
 - `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListEvent.kt`
 - `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListPresenter.kt`
@@ -613,7 +685,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 
 ### 의존하는 이전 Phase
 
-- Phase 8
+- Phase 9
 
 ### 구현 상세
 
@@ -639,7 +711,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 
 - 모든 필터 조합과 빈 상태가 자동 테스트된다.
 - CRUD 후 필터 결과가 Room Flow를 통해 즉시 갱신된다.
-- Phase 0~8 회귀 테스트와 빌드가 통과한다.
+- Phase 0~9 회귀 테스트와 빌드가 통과한다.
 
 ### 해당 Phase에서 수정하면 안 되는 범위
 
@@ -648,7 +720,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - Reminder 선택 및 시스템 알람
 - Category 관리 정책 변경
 
-## Phase 10: Reminder / Notification / AlarmManager
+## Phase 11: Reminder / Notification / AlarmManager
 
 ### 목적
 
@@ -657,6 +729,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 ### 구현 대상
 
 - Reminder 시각 계산과 TodoEdit 입력
+- TodoService/ReminderService의 Repository와 AlarmScheduler 조합
 - AlarmScheduler 계약 및 Android AlarmManager 구현
 - Exact→Inexact fallback
 - Notification Channel/Factory/Receiver
@@ -666,6 +739,8 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 ### 생성 또는 수정할 예상 파일
 
 - `app/src/main/java/com/example/todoapplication/domain/reminder/ReminderCalculator.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/TodoService.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/ReminderService.kt`
 - `app/src/main/java/com/example/todoapplication/notification/AlarmScheduler.kt`
 - `app/src/main/java/com/example/todoapplication/notification/AndroidAlarmScheduler.kt`
 - `app/src/main/java/com/example/todoapplication/notification/AlarmIdentity.kt`
@@ -684,14 +759,14 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 
 ### 의존하는 이전 Phase
 
-- Phase 9 및 CRUD/필터 전체 회귀 테스트 성공
+- Phase 10 및 CRUD/필터 전체 회귀 테스트 성공
 
 ### 구현 상세
 
-- 체크포인트 10A: `15`, `1440` Reminder 선택·계산·Room 저장까지만 구현하고 빌드/테스트한다.
-- 체크포인트 10B: Notification Channel, Receiver와 Notification 생성을 구현하고 빌드/테스트한다.
-- 체크포인트 10C: 안정적인 Todo+Reminder Alarm ID와 AlarmScheduler를 구현한다.
-- 체크포인트 10D: 최초 Reminder 활성화 시점의 알림 권한 요청 및 사용자 안내를 연결한다.
+- 체크포인트 11A: `15`, `1440` Reminder 선택·계산·Room 저장까지만 구현하고 빌드/테스트한다.
+- 체크포인트 11B: Notification Channel, Receiver와 Notification 생성을 구현하고 빌드/테스트한다.
+- 체크포인트 11C: 안정적인 Todo+Reminder Alarm ID와 AlarmScheduler를 구현한다.
+- 체크포인트 11D: Service가 Repository와 AlarmScheduler를 조합하고 최초 Reminder 활성화 시점의 권한 요청 결과 및 사용자 안내를 연결한다.
 - 계산 시각이 과거면 Reminder만 저장하고 Alarm을 등록하지 않는다.
 - 알림 권한이 없으면 Todo/Reminder를 저장하고 Alarm을 등록하지 않는다.
 - Exact 사용 가능 시 Exact, 불가 시 허용된 Inexact Alarm을 사용한다.
@@ -699,6 +774,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - 날짜·시간·Reminder 수정 시 기존 Alarm을 취소하고 미래 Alarm을 재등록한다.
 - TODO 삭제 시 Reminder와 미래 Alarm을 제거한다.
 - 완료 시 Reminder는 유지하고 미래 Alarm만 취소하며, 미완료 복귀 시 미래 Reminder만 재등록한다.
+- AlarmScheduler는 Repository 내부에 숨기지 않고 TodoService 또는 ReminderService에 별도 abstraction으로 주입한다.
 
 ### 테스트 항목
 
@@ -726,7 +802,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - 부팅 완료 Receiver와 재부팅 복구
 - Category 및 Todo 정렬 정책
 
-## Phase 11: 재부팅 및 Alarm 복구
+## Phase 12: 재부팅 및 Alarm 복구
 
 ### 목적
 
@@ -750,14 +826,14 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 
 ### 의존하는 이전 Phase
 
-- Phase 10
+- Phase 11
 
 ### 구현 상세
 
 - 부팅 완료 이벤트에서 비동기 복구 작업을 안전하게 시작한다.
 - 현재보다 미래이고 미완료 TODO에 속한 Reminder만 조회한다.
 - 지나간 Reminder는 보존하되 알림을 발생시키지 않는다.
-- Phase 10과 같은 Alarm ID 및 Exact/Inexact fallback을 재사용한다.
+- Phase 11과 같은 Alarm ID 및 Exact/Inexact fallback을 재사용한다.
 - 한 Alarm 실패가 나머지 복구를 중단하지 않도록 처리한다.
 - 필요한 최소 Manifest 권한과 exported 설정만 선언한다.
 
@@ -783,7 +859,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - CRUD, 필터 및 Category 정책 변경
 - 새로운 권한 추가
 
-## Phase 12: 통합 테스트 및 MVP 완료 검증
+## Phase 13: 통합 테스트 및 MVP 완료 검증
 
 ### 목적
 
@@ -792,7 +868,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 ### 구현 대상
 
 - 주요 사용자 흐름 통합 테스트
-- DAO/Presenter/UI/Alarm 회귀 테스트 정리
+- DAO/Repository/Service/Presenter/UI/Alarm 회귀 테스트 정리
 - 접근성, 오류, 데이터 유지와 권한 시나리오 검증
 - 테스트로 발견된 요구사항 범위 내 결함 수정
 
@@ -807,7 +883,7 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 
 ### 의존하는 이전 Phase
 
-- Phase 0~11 전체
+- Phase 0~12 전체
 
 ### 구현 상세
 

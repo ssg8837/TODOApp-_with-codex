@@ -12,11 +12,11 @@
 
 ## 구조와 유지보수성
 
-- 화면 표시, 사용자 이벤트, 데이터 처리와 시스템 API 책임을 분리한다.
+- Compose View, Presenter, Application Service, Repository, DAO/Room 및 시스템 API 책임을 분리한다.
 - 비즈니스 로직은 Android UI 없이 단위 테스트할 수 있어야 한다.
 - 로컬 우선 구조를 사용하며 Room을 데이터의 Source of Truth로 삼는다.
 - 요구사항 변경에 대응할 수 있어야 하지만 불필요한 프레임워크와 추상화는 추가하지 않는다.
-- Hilt/Koin은 사용하지 않고 constructor injection, Application 수준 `AppContainer`와 필요한 ViewModel Factory를 사용한다.
+- Hilt/Koin은 사용하지 않고 constructor injection을 사용한다. Application 수준 `AppContainer`는 Repository와 Application Service를 조립하고 필요한 ViewModel Factory는 Service를 Presenter에 주입한다.
 - Room Entity와 Domain Model을 분리하고 mapper로 변환한다. Network DTO는 만들지 않는다.
 
 ## 성능과 비동기 처리

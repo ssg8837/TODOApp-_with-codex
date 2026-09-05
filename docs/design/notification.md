@@ -6,6 +6,7 @@
 
 ```text
 Todo/Reminder 저장
+  -> TodoService 또는 ReminderService
   -> 알림 시각 계산
   -> 권한 및 미래 시각 확인
   -> AlarmScheduler
@@ -13,6 +14,10 @@ Todo/Reminder 저장
   -> TodoAlarmReceiver
   -> NotificationManager
 ```
+
+- `AlarmScheduler`는 Repository 내부에 숨기지 않는 별도 외부 시스템 abstraction이다.
+- `TodoService` 또는 `ReminderService`가 TodoRepository, ReminderRepository와 AlarmScheduler를 조합한다.
+- Service는 저장과 Alarm 실행 순서를 제어하지만 DB transaction의 내부 절차는 Repository에 위임한다.
 
 - 알림 시각은 `TODO 예정일시 - minutesBefore`다.
 - `minutesBefore`의 MVP 값은 `15`, `1440`이며 복수 선택을 허용한다.

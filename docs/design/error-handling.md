@@ -4,10 +4,18 @@
 
 ## 원칙
 
-- 기술 오류를 Presenter에서 사용자 행동이 가능한 상태로 변환한다.
+- DAO/Room 오류는 Repository가 데이터 계층 오류로 변환하고, Application Service가 비즈니스 의미로 해석하며, Presenter가 사용자 행동이 가능한 `UiState`와 메시지로 변환한다.
 - 내부 예외 메시지, 스택 트레이스와 DB 코드를 직접 표시하지 않는다.
 - 저장 실패 시 편집값, 삭제 실패 시 기존 데이터처럼 복구 가능한 상태를 유지한다.
 - 빈 데이터는 오류가 아니라 별도 빈 상태로 표시한다.
+
+```text
+DAO / Room 오류
+    -> Repository 데이터 계층 오류
+    -> Application Service 비즈니스 결과
+    -> Presenter UiState/ErrorMessage
+    -> Compose View 표시
+```
 
 ## 범주
 

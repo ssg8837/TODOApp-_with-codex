@@ -63,4 +63,51 @@ class RoomReminderRepositoryTest {
         }
         Unit
     }
+
+    @Test
+    fun replaceRemindersMapsDomainsAndReturnsGeneratedIds() = runBlocking {
+        val categoryId = database.categoryDao().getSystemCategory()!!.id
+        val savedTodo = todoRepository.create(todo(categoryId, "교체", LocalTime.of(10, 0)))
+        repository.create(Reminder(0, savedTodo.id, 5))
+
+        val saved = repository.replaceReminders(
+            savedTodo.id,
+            listOf(Reminder(0, savedTodo.id, 15), Reminder(0, savedTodo.id, 1_440)),
+        )
+
+        assertEquals(listOf(15, 1_440), saved.map { it.minutesBefore })
+        assertEquals(true, saved.all { it.id > 0 })
+        assertEquals(saved, repository.observeByTodoId(savedTodo.id).first())
+    }
+
+    @Test
+    fun replaceTransactionFailureIsConvertedAndKeepsExistingReminders() = runBlocking {
+        val categoryId = database.categoryDao().getSystemCategory()!!.id
+        val savedTodo = todoRepository.create(todo(categoryId, "교체 실패", LocalTime.of(10, 0)))
+        val existing = repository.create(Reminder(0, savedTodo.id, 5))
+        database.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER fail_repository_replacement_reminder
+            BEFORE INSERT ON reminders
+            WHEN NEW.minutes_before = 1440
+            BEGIN
+                SELECT RAISE(ABORT, 'forced replacement failure');
+            END
+            """.trimIndent(),
+        )
+
+        assertThrows(DataAccessException::class.java) {
+            runBlocking {
+                repository.replaceReminders(
+                    savedTodo.id,
+                    listOf(
+                        Reminder(0, savedTodo.id, 15),
+                        Reminder(0, savedTodo.id, 1_440),
+                    ),
+                )
+            }
+        }
+
+        assertEquals(listOf(existing), repository.observeByTodoId(savedTodo.id).first())
+    }
 }

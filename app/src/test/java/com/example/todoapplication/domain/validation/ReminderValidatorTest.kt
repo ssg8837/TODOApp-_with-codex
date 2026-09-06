@@ -29,4 +29,14 @@ class ReminderValidatorTest {
             ReminderValidator.validate(reminder),
         )
     }
+
+    @Test
+    fun reminderTodoMustMatchReplacementTarget() {
+        val reminder = Reminder(id = 0, todoId = 2, minutesBefore = 15)
+
+        assertEquals(
+            setOf(ReminderValidationError.TODO_ID_MISMATCH),
+            ReminderValidator.validate(reminder, expectedTodoId = 1),
+        )
+    }
 }

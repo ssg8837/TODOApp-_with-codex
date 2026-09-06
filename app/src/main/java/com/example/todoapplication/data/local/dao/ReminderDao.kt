@@ -3,22 +3,35 @@ package com.example.todoapplication.data.local.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import com.example.todoapplication.data.local.entity.ReminderEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface ReminderDao {
+abstract class ReminderDao {
     @Insert
-    suspend fun insert(reminder: ReminderEntity): Long
+    abstract suspend fun insert(reminder: ReminderEntity): Long
+
+    @Insert
+    protected abstract suspend fun insertAll(reminders: List<ReminderEntity>): List<Long>
 
     @Query("SELECT * FROM reminders WHERE todo_id = :todoId ORDER BY minutes_before ASC, id ASC")
-    fun observeByTodoId(todoId: Long): Flow<List<ReminderEntity>>
+    abstract fun observeByTodoId(todoId: Long): Flow<List<ReminderEntity>>
 
     @Query("DELETE FROM reminders WHERE id = :id")
-    suspend fun deleteById(id: Long): Int
+    abstract suspend fun deleteById(id: Long): Int
 
     @Query("DELETE FROM reminders WHERE todo_id = :todoId")
-    suspend fun deleteByTodoId(todoId: Long): Int
+    abstract suspend fun deleteByTodoId(todoId: Long): Int
+
+    @Transaction
+    open suspend fun replaceByTodoId(
+        todoId: Long,
+        reminders: List<ReminderEntity>,
+    ): List<Long> {
+        deleteByTodoId(todoId)
+        return insertAll(reminders)
+    }
 
     @Query(
         """
@@ -34,7 +47,7 @@ interface ReminderDao {
         ORDER BY todos.date_epoch_day ASC, todos.time_minute_of_day ASC, reminders.id ASC
         """,
     )
-    suspend fun getFutureAlarmRecoveryCandidates(
+    abstract suspend fun getFutureAlarmRecoveryCandidates(
         currentDateEpochDay: Long,
         currentMinuteOfDay: Int,
     ): List<ReminderEntity>

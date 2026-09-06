@@ -42,5 +42,5 @@ interface FeaturePresenter {
 
 - `TodoService`: Todo 등록·수정·삭제·완료 변경·날짜별 조회, Todo Validator 적용과 향후 Reminder/Alarm 연계 조정
 - `CategoryService`: Category 생성·수정·삭제·순서 변경, 시스템 Category 보호와 Category Validator 적용
-- `ReminderService`: Reminder 등록·교체·삭제, Reminder Validator 적용과 향후 AlarmScheduler 연계
+- `ReminderService`: Reminder 등록·교체·삭제, Reminder Validator 적용과 향후 AlarmScheduler 연계. 교체 시 검증 후 Repository의 단일 원자적 교체 API만 호출한다.
 - Service는 DB transaction 절차를 재구현하지 않고 Repository의 원자적 연산을 호출한다.

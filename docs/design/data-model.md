@@ -119,8 +119,11 @@ Todo     1 ---- N Reminder
 ### ReminderDao
 
 - 등록, Todo별 조회, 개별 삭제와 Todo별 전체 삭제
+- 기존 Reminder 전체 삭제와 신규 Reminder bulk insert를 하나의 transaction으로 수행하는 Todo별 교체
 - 현재 시각보다 미래인 Reminder 조회
 - 재부팅 복구용 미래 Reminder 조회
+
+Reminder 교체 transaction에서 신규 항목 하나라도 저장에 실패하면 기존 Reminder 삭제와 신규 삽입을 모두 rollback한다. 빈 목록 교체는 기존 Reminder 전체 삭제만 commit한다.
 
 ## 모델 계층
 

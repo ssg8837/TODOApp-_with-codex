@@ -309,10 +309,10 @@ UI와 저장소 사이의 Todo, Category와 Reminder 사용자 유스케이스 �
 - Presenter는 `TodoService`, `CategoryService`, `ReminderService` 계약에 의존하고 각 `Default*Service`가 유스케이스를 구현한다.
 - `DefaultTodoService`는 Todo 등록·수정·삭제·완료 변경·날짜별 조회와 `TodoValidator` 적용을 담당한다.
 - `DefaultCategoryService`는 생성·수정·삭제·순서 변경, 시스템 Category 보호와 `CategoryValidator` 적용을 담당한다.
-- `DefaultReminderService`는 Reminder 등록·교체·삭제와 `ReminderValidator` 적용을 담당한다.
+- `DefaultReminderService`는 Reminder 등록·교체·삭제와 `ReminderValidator` 적용을 담당한다. 교체는 검증 후 Repository의 단일 원자적 교체 API를 호출한다.
 - 유효성 검증에 실패하면 Repository 변경을 호출하지 않는다.
 - 여러 Repository가 필요한 유스케이스의 호출 순서와 부분 실패 정책을 Service에 캡슐화한다.
-- Category 삭제 및 재정렬의 DB transaction 내부 절차는 다시 구현하지 않고 Repository의 원자적 API를 호출한다.
+- Category 삭제·재정렬과 Reminder 교체의 DB transaction 내부 절차는 다시 구현하지 않고 Repository의 원자적 API를 호출한다.
 - Service는 Domain Model과 Repository abstraction만 사용하며 Compose, Android UI, DAO, RoomDatabase와 Room Entity에 의존하지 않는다.
 - `AppContainer`가 Database/DAO→Repository→Service를 constructor injection으로 조립한다.
 
@@ -323,6 +323,7 @@ UI와 저장소 사이의 Todo, Category와 Reminder 사용자 유스케이스 �
 - 시스템 Category 수정·삭제 방지와 순서 정책
 - 여러 Repository 호출 순서 및 오류 시 후속 호출 중단 여부
 - Category transaction API 위임 및 Service에서 내부 절차를 재구현하지 않음
+- Reminder 교체 Repository API 단일 호출, 실패 rollback과 부분 반영 방지
 - Fake Repository 기반 `./gradlew testDebugUnitTest`
 - `./gradlew assembleDebug`
 

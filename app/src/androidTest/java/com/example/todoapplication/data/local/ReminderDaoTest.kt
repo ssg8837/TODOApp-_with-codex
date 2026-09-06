@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -61,5 +62,69 @@ class ReminderDaoTest {
         )
 
         assertEquals(listOf(15), candidates.map { it.minutesBefore })
+    }
+
+    @Test
+    fun replaceByTodoIdReplacesExistingRemindersAndAcceptsEmptyList() = runBlocking {
+        val categoryId = database.categoryDao().getSystemCategory()!!.id
+        val todoId = database.todoDao().insert(todo(categoryId, "replace", 600))
+        database.reminderDao().insert(ReminderEntity(todoId = todoId, minutesBefore = 5))
+        database.reminderDao().insert(ReminderEntity(todoId = todoId, minutesBefore = 10))
+
+        val ids = database.reminderDao().replaceByTodoId(
+            todoId,
+            listOf(
+                ReminderEntity(todoId = todoId, minutesBefore = 15),
+                ReminderEntity(todoId = todoId, minutesBefore = 1_440),
+            ),
+        )
+
+        assertEquals(2, ids.size)
+        assertEquals(
+            listOf(15, 1_440),
+            database.reminderDao().observeByTodoId(todoId).first().map { it.minutesBefore },
+        )
+
+        assertEquals(emptyList<Long>(), database.reminderDao().replaceByTodoId(todoId, emptyList()))
+        assertEquals(
+            emptyList<ReminderEntity>(),
+            database.reminderDao().observeByTodoId(todoId).first(),
+        )
+    }
+
+    @Test
+    fun replaceByTodoIdRollsBackDeletionAndPartialInsertionWhenInsertFails() = runBlocking {
+        val categoryId = database.categoryDao().getSystemCategory()!!.id
+        val todoId = database.todoDao().insert(todo(categoryId, "rollback", 600))
+        database.reminderDao().insert(ReminderEntity(todoId = todoId, minutesBefore = 5))
+        database.reminderDao().insert(ReminderEntity(todoId = todoId, minutesBefore = 10))
+        database.openHelper.writableDatabase.execSQL(
+            """
+            CREATE TRIGGER fail_second_replacement_reminder
+            BEFORE INSERT ON reminders
+            WHEN NEW.minutes_before = 1440
+            BEGIN
+                SELECT RAISE(ABORT, 'forced replacement failure');
+            END
+            """.trimIndent(),
+        )
+
+        try {
+            database.reminderDao().replaceByTodoId(
+                todoId,
+                listOf(
+                    ReminderEntity(todoId = todoId, minutesBefore = 15),
+                    ReminderEntity(todoId = todoId, minutesBefore = 1_440),
+                ),
+            )
+            fail("Replacement must fail")
+        } catch (_: Exception) {
+            // The assertions below verify rollback rather than a specific SQLite exception type.
+        }
+
+        assertEquals(
+            listOf(5, 10),
+            database.reminderDao().observeByTodoId(todoId).first().map { it.minutesBefore },
+        )
     }
 }

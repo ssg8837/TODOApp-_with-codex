@@ -14,6 +14,11 @@ interface ReminderRepository {
 
     suspend fun deleteByTodoId(todoId: Long): Int
 
+    suspend fun replaceReminders(
+        todoId: Long,
+        reminders: List<Reminder>,
+    ): List<Reminder>
+
     suspend fun getFutureAlarmRecoveryCandidates(
         currentDate: LocalDate,
         currentTime: LocalTime,

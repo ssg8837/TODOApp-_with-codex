@@ -31,10 +31,13 @@ class DefaultAppContainerTest {
     }
 
     @Test
-    fun containerAssemblesDatabaseAndAllRepositoryInterfaces() = runBlocking {
+    fun containerAssemblesDatabaseRepositoriesAndServices() = runBlocking {
         assertNotNull(container.todoRepository)
         assertNotNull(container.categoryRepository)
         assertNotNull(container.reminderRepository)
+        assertNotNull(container.todoService)
+        assertNotNull(container.categoryService)
+        assertNotNull(container.reminderService)
         assertNotNull(container.categoryRepository.getSystemCategory())
     }
 }

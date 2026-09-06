@@ -33,6 +33,15 @@ internal class RoomReminderRepository(
         reminderDao.deleteByTodoId(todoId)
     }
 
+    override suspend fun replaceReminders(
+        todoId: Long,
+        reminders: List<Reminder>,
+    ): List<Reminder> = dataAccess {
+        val entities = reminders.map(ReminderMapper::toEntity)
+        val ids = reminderDao.replaceByTodoId(todoId, entities)
+        reminders.zip(ids) { reminder, id -> reminder.copy(id = id) }
+    }
+
     override suspend fun getFutureAlarmRecoveryCandidates(
         currentDate: LocalDate,
         currentTime: LocalTime,

@@ -12,6 +12,7 @@
 
 - 비즈니스 규칙과 `TodoValidator`, `CategoryValidator`, `ReminderValidator` 적용을 검증한다.
 - 여러 Repository 호출 및 데이터 변경 순서와 Todo/Reminder 유스케이스 조합을 검증한다.
+- Reminder 교체 검증 성공 시 Repository의 원자적 교체 API를 한 번만 호출하고, 검증 실패 시 호출하지 않는지 확인한다.
 - 유효하지 않은 상태에서는 Repository 변경이 호출되지 않는지 검증한다.
 - 시스템 Category 보호와 Category 순서 정책을 검증한다.
 - 가능한 경우 Fake Repository를 사용한 순수 JVM Unit Test로 작성한다.
@@ -29,6 +30,7 @@
 - Todo, Category와 Reminder의 등록·조회·수정·삭제
 - 날짜, 종류, 완료 여부 및 복합 필터
 - Todo 삭제 시 Reminder 관계 삭제
+- Reminder 교체 시 삭제+bulk insert 원자성, 빈 목록 교체와 삽입 실패 rollback
 - 최초 DB 생성 시 시스템 기본 Category `일반` 생성
 - Category 이름 unique 제약 및 `일반` 수정·삭제 차단
 - 사용자 Category 삭제 시 연결 Todo를 `일반`로 재지정한 뒤 삭제하는 transaction

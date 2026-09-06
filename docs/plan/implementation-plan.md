@@ -350,12 +350,14 @@ UI와 저장소 사이의 Todo, Category와 Reminder 사용자 유스케이스 �
 ### 구현 대상
 
 - TodoList UiState, Event와 Presenter
+- Todo와 Category 표시 정보를 결합한 `TodoListItemUiModel`
 - 날짜/시간을 테스트하기 위한 Clock 경계
 - ViewModel Factory와 Presenter 테스트 도구
 
 ### 생성 또는 수정할 예상 파일
 
 - `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListUiState.kt`
+- `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListItemUiModel.kt`
 - `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListEvent.kt`
 - `app/src/main/java/com/example/todoapplication/feature/todo/list/TodoListPresenter.kt`
 - `app/src/main/java/com/example/todoapplication/presenterfactory/TodoListPresenterFactory.kt`
@@ -372,7 +374,8 @@ UI와 저장소 사이의 Todo, Category와 Reminder 사용자 유스케이스 �
 
 - 초기 `selectedDate`를 Clock 기준 오늘로 설정한다.
 - 이전/다음 날짜 및 DatePicker 선택 날짜 이벤트를 처리한다.
-- `TodoService`의 정렬된 Todo Flow를 불변 `StateFlow<UiState>`로 노출한다.
+- `TodoService`의 정렬된 Todo Flow와 `CategoryService`의 Category Flow를 결합해 Category 이름과 의미 색상을 포함한 목록 모델을 불변 `StateFlow<UiState>`로 노출한다.
+- Category 이름·색상 변경을 목록 모델에 반응형으로 반영하며, Category 불일치는 사용자 문자열 fallback 없이 presentation 오류로 처리한다.
 - 완료/미완료 변경을 처리하고 저장 실패 시 UI와 DB 상태를 일치시킨다.
 - 날짜 빈 상태, 로딩과 조회 오류를 구분한다.
 - 이 Phase에서는 Category/미완료 필터를 적용하지 않는다.
@@ -382,6 +385,7 @@ UI와 저장소 사이의 Todo, Category와 Reminder 사용자 유스케이스 �
 - 고정 Clock 기준 오늘 초기화
 - 이전/다음 및 임의 날짜 선택
 - 정렬 목록 반영과 빈 상태
+- Todo와 Category 결합, Category 이름·색상 변경 및 동일 Category를 사용하는 복수 Todo 반영
 - 완료/미완료 성공과 저장 실패 복구
 - 조회 실패의 사용자 메시지 변환
 - `./gradlew testDebugUnitTest`

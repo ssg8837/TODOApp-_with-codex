@@ -21,7 +21,7 @@ interface FeaturePresenter {
 
 ## 기능별 Presenter
 
-- `TodoListPresenter`: 날짜와 필터 상태, Service가 제공하는 목록 관찰, 사용자 완료 변경 이벤트 전달 및 결과 표시
+- `TodoListPresenter`: 날짜 상태, TodoService 목록과 CategoryService 목록의 반응형 결합, 화면용 `TodoListItemUiModel` 제공, 사용자 완료 변경 이벤트 전달 및 결과 표시
 - `TodoEditPresenter`: 신규·기존 화면 상태와 입력값 관리, Service 저장 결과 및 검증 오류 표시
 - `CategoryPresenter`: 저장 순서의 Category 화면 상태, 색상·재정렬 입력과 Service 결과 표시
 
@@ -30,6 +30,7 @@ interface FeaturePresenter {
 - View는 Application Service, Repository, DAO와 Room을 직접 호출하지 않는다.
 - Presenter는 Application Service만 호출하며 Repository, DAO와 Room을 직접 호출하지 않는다.
 - Presenter는 Domain Validator를 직접 호출하거나 비즈니스 규칙을 구현하지 않는다.
+- Todo 목록 View는 Category를 별도 조회하지 않으며 Presenter가 Category 이름과 `CategoryColor`를 결합한 화면용 목록 모델을 사용한다.
 - Presenter는 Composable을 호출하거나 `NavController`를 보관하지 않는다.
 - 이동과 일회성 메시지는 테스트 가능하며 중복 소비되지 않는 계약으로 전달한다.
 - 알람 예약과 데이터 변경의 조정은 Application Service가 `AlarmScheduler` 계약과 Repository를 조합해 수행한다.

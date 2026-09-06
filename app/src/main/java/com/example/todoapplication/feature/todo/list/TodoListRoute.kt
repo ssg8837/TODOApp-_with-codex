@@ -10,7 +10,10 @@ import com.example.todoapplication.app.TodoApplication
 import com.example.todoapplication.presenterfactory.TodoListPresenterFactory
 
 @Composable
-fun TodoListRoute() {
+fun TodoListRoute(
+    onAddTodo: (java.time.LocalDate) -> Unit,
+    onEditTodo: (Long) -> Unit,
+) {
     val application = LocalContext.current.applicationContext as TodoApplication
     val factory = remember(application.container) {
         TodoListPresenterFactory(
@@ -24,5 +27,7 @@ fun TodoListRoute() {
     TodoListScreen(
         state = state,
         onEvent = presenter::onEvent,
+        onAddTodo = { onAddTodo(state.selectedDate) },
+        onEditTodo = onEditTodo,
     )
 }

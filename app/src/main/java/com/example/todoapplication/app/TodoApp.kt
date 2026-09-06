@@ -1,9 +1,11 @@
 package com.example.todoapplication.app
 
 import androidx.compose.runtime.Composable
-import com.example.todoapplication.feature.todo.list.TodoListRoute
+import androidx.navigation.compose.rememberNavController
+import com.example.todoapplication.navigation.TodoNavHost
 
 @Composable
 fun TodoApp() {
-    TodoListRoute()
+    val navController = rememberNavController()
+    TodoNavHost(navController = navController)
 }

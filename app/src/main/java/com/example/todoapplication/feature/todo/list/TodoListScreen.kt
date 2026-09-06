@@ -2,6 +2,7 @@ package com.example.todoapplication.feature.todo.list
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -54,17 +56,34 @@ const val SELECT_DATE_TAG = "select-date"
 const val LOADING_TAG = "todo-list-loading"
 const val ERROR_TAG = "todo-list-error"
 const val CATEGORY_COLOR_TAG_PREFIX = "category-color-"
+const val ADD_TODO_TAG = "add-todo"
+const val TODO_ITEM_TAG_PREFIX = "todo-item-"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoListScreen(
     state: TodoListUiState,
     onEvent: (TodoListEvent) -> Unit,
+    onAddTodo: () -> Unit = {},
+    onEditTodo: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
+    val addTodoDescription = stringResource(R.string.add_todo_description)
 
-    Scaffold(modifier = modifier.fillMaxSize()) { contentPadding ->
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onAddTodo,
+                modifier = Modifier
+                    .testTag(ADD_TODO_TAG)
+                    .semantics { contentDescription = addTodoDescription },
+            ) {
+                Text(text = stringResource(R.string.add_todo))
+            }
+        },
+    ) { contentPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,6 +116,7 @@ fun TodoListScreen(
                 onCompletedChange = { id, completed ->
                     onEvent(TodoListEvent.SetCompleted(id, completed))
                 },
+                onEditTodo = onEditTodo,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -165,6 +185,7 @@ private fun TodoListContent(
     todos: List<TodoListItemUiModel>,
     showEmptyState: Boolean,
     onCompletedChange: (Long, Boolean) -> Unit,
+    onEditTodo: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (todos.isEmpty()) {
@@ -185,6 +206,7 @@ private fun TodoListContent(
             TodoListItem(
                 todo = todo,
                 onCompletedChange = { completed -> onCompletedChange(todo.id, completed) },
+                onEdit = { onEditTodo(todo.id) },
             )
             HorizontalDivider()
         }
@@ -195,6 +217,7 @@ private fun TodoListContent(
 private fun TodoListItem(
     todo: TodoListItemUiModel,
     onCompletedChange: (Boolean) -> Unit,
+    onEdit: () -> Unit,
 ) {
     val completionDescription = stringResource(R.string.todo_completion, todo.title)
     Row(
@@ -213,6 +236,8 @@ private fun TodoListItem(
         Column(
             modifier = Modifier
                 .weight(1f)
+                .clickable(onClick = onEdit)
+                .testTag(TODO_ITEM_TAG_PREFIX + todo.id)
                 .padding(top = 4.dp),
         ) {
             Text(

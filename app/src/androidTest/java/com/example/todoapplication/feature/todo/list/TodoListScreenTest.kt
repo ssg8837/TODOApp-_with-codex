@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -52,7 +53,7 @@ class TodoListScreenTest {
         composeRule.onNodeWithText("시간 없는 할 일").assertIsDisplayed()
         composeRule.onNodeWithText("00:00").assertIsNotDisplayed()
         composeRule.onAllNodesWithText("업무", useUnmergedTree = true).assertCountEquals(2)
-        composeRule.onAllNodesWithTag(CATEGORY_COLOR_TAG_PREFIX + CategoryColor.BLUE.name)
+        composeRule.onAllNodesWithContentDescription("업무 카테고리 색상")
             .assertCountEquals(2)
     }
 
@@ -102,6 +103,25 @@ class TodoListScreenTest {
     }
 
     @Test
+    fun addAndTodoItemClicksUseSeparateNavigationCallbacks() {
+        var addClicks = 0
+        val editedIds = mutableListOf<Long>()
+        setScreen(
+            state = state(todos = listOf(item(id = 7))),
+            onAddTodo = { addClicks++ },
+            onEditTodo = editedIds::add,
+        )
+
+        composeRule.onNodeWithTag(ADD_TODO_TAG).performClick()
+        composeRule.onNodeWithTag(TODO_ITEM_TAG_PREFIX + 7).performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(1, addClicks)
+            assertEquals(listOf(7L), editedIds)
+        }
+    }
+
+    @Test
     fun datePickerConfirmationEmitsSelectedDateEvent() {
         val selectedDate = LocalDate.of(2026, 9, 6)
         val events = mutableListOf<TodoListEvent>()
@@ -124,10 +144,17 @@ class TodoListScreenTest {
     private fun setScreen(
         state: TodoListUiState,
         onEvent: (TodoListEvent) -> Unit = {},
+        onAddTodo: () -> Unit = {},
+        onEditTodo: (Long) -> Unit = {},
     ) {
         composeRule.setContent {
             ToDOApplicationTheme {
-                TodoListScreen(state = state, onEvent = onEvent)
+                TodoListScreen(
+                    state = state,
+                    onEvent = onEvent,
+                    onAddTodo = onAddTodo,
+                    onEditTodo = onEditTodo,
+                )
             }
         }
     }

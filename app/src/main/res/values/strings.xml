@@ -14,4 +14,27 @@
     <string name="error_invalid_todo">TODO 정보가 올바르지 않습니다.</string>
     <string name="error_persistence_failure">목록을 불러오거나 변경하지 못했습니다.</string>
     <string name="error_operation_failed">요청을 처리하지 못했습니다.</string>
+    <string name="add_todo">+</string>
+    <string name="add_todo_description">TODO 추가</string>
+    <string name="create_todo_title">TODO 등록</string>
+    <string name="edit_todo_title">TODO 수정</string>
+    <string name="back">뒤로</string>
+    <string name="todo_title_label">제목</string>
+    <string name="todo_title_required">제목을 입력해주세요.</string>
+    <string name="todo_date_label">날짜</string>
+    <string name="todo_time_label">시간</string>
+    <string name="todo_no_time">시간 없음</string>
+    <string name="todo_select_time">시간 선택</string>
+    <string name="todo_clear_time">시간 제거</string>
+    <string name="todo_category_label">카테고리</string>
+    <string name="todo_category_required">카테고리를 선택해주세요.</string>
+    <string name="save">저장</string>
+    <string name="saving">저장 중</string>
+    <string name="error_edit_todo_not_found">수정할 TODO를 찾을 수 없습니다.</string>
+    <string name="error_edit_category_not_found">카테고리를 찾을 수 없습니다.</string>
+    <string name="error_edit_invalid_todo">입력한 TODO 정보를 확인해주세요.</string>
+    <string name="error_edit_persistence_failure">TODO를 저장하지 못했습니다.</string>
+    <string name="error_edit_operation_failed">요청을 처리하지 못했습니다.</string>
+    <string name="time_picker_confirm">선택</string>
+    <string name="time_picker_cancel">취소</string>
 </resources>

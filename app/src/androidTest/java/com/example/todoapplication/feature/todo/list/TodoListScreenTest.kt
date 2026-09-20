@@ -105,19 +105,23 @@ class TodoListScreenTest {
     @Test
     fun addAndTodoItemClicksUseSeparateNavigationCallbacks() {
         var addClicks = 0
+        var manageClicks = 0
         val editedIds = mutableListOf<Long>()
         setScreen(
             state = state(todos = listOf(item(id = 7))),
             onAddTodo = { addClicks++ },
             onEditTodo = editedIds::add,
+            onManageCategories = { manageClicks++ },
         )
 
         composeRule.onNodeWithTag(ADD_TODO_TAG).performClick()
         composeRule.onNodeWithTag(TODO_ITEM_TAG_PREFIX + 7).performClick()
+        composeRule.onNodeWithTag(MANAGE_CATEGORIES_TAG).performClick()
 
         composeRule.runOnIdle {
             assertEquals(1, addClicks)
             assertEquals(listOf(7L), editedIds)
+            assertEquals(1, manageClicks)
         }
     }
 
@@ -146,6 +150,7 @@ class TodoListScreenTest {
         onEvent: (TodoListEvent) -> Unit = {},
         onAddTodo: () -> Unit = {},
         onEditTodo: (Long) -> Unit = {},
+        onManageCategories: () -> Unit = {},
     ) {
         composeRule.setContent {
             ToDOApplicationTheme {
@@ -154,6 +159,7 @@ class TodoListScreenTest {
                     onEvent = onEvent,
                     onAddTodo = onAddTodo,
                     onEditTodo = onEditTodo,
+                    onManageCategories = onManageCategories,
                 )
             }
         }

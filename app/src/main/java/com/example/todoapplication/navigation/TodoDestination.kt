@@ -4,6 +4,7 @@ import java.time.LocalDate
 
 object TodoDestination {
     const val LIST = "todo/list"
+    const val CATEGORY_MANAGEMENT = "category/manage"
     const val NEW_DATE_ARGUMENT = "date"
     const val TODO_ID_ARGUMENT = "todoId"
     const val NEW_PATTERN = "todo/new/{$NEW_DATE_ARGUMENT}"

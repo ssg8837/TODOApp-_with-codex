@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.example.todoapplication.feature.todo.edit.TodoEditMode
+import com.example.todoapplication.feature.category.CategoryManagementRoute
 import com.example.todoapplication.feature.todo.edit.TodoEditRoute
 import com.example.todoapplication.feature.todo.list.TodoListRoute
 import java.time.LocalDate
@@ -21,7 +22,11 @@ fun TodoNavHost(navController: NavHostController) {
             TodoListRoute(
                 onAddTodo = { date -> navController.navigate(TodoDestination.newTodo(date)) },
                 onEditTodo = { todoId -> navController.navigate(TodoDestination.editTodo(todoId)) },
+                onManageCategories = { navController.navigate(TodoDestination.CATEGORY_MANAGEMENT) },
             )
+        }
+        composable(TodoDestination.CATEGORY_MANAGEMENT) {
+            CategoryManagementRoute(onBack = navController::popBackStack)
         }
         composable(
             route = TodoDestination.NEW_PATTERN,

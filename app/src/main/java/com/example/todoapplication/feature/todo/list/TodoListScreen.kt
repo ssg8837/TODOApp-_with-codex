@@ -57,6 +57,7 @@ const val LOADING_TAG = "todo-list-loading"
 const val ERROR_TAG = "todo-list-error"
 const val CATEGORY_COLOR_TAG_PREFIX = "category-color-"
 const val ADD_TODO_TAG = "add-todo"
+const val MANAGE_CATEGORIES_TAG = "manage-categories"
 const val TODO_ITEM_TAG_PREFIX = "todo-item-"
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +67,7 @@ fun TodoListScreen(
     onEvent: (TodoListEvent) -> Unit,
     onAddTodo: () -> Unit = {},
     onEditTodo: (Long) -> Unit = {},
+    onManageCategories: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var isDatePickerVisible by remember { mutableStateOf(false) }
@@ -89,11 +91,20 @@ fun TodoListScreen(
                 .fillMaxSize()
                 .padding(contentPadding),
         ) {
-            Text(
-                text = stringResource(R.string.todo_list_title),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.todo_list_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                TextButton(
+                    onClick = onManageCategories,
+                    modifier = Modifier.testTag(MANAGE_CATEGORIES_TAG),
+                ) { Text(stringResource(R.string.manage_categories)) }
+            }
             DateHeader(
                 selectedDate = state.selectedDate,
                 onPreviousDate = { onEvent(TodoListEvent.PreviousDate) },

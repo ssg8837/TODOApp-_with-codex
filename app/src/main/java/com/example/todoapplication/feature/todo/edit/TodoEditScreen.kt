@@ -61,6 +61,10 @@ const val SAVE_TODO_TAG = "save-todo"
 const val EDIT_LOADING_TAG = "edit-loading"
 const val EDIT_ERROR_TAG = "edit-error"
 const val CATEGORY_OPTION_TAG_PREFIX = "category-option-"
+const val DELETE_TODO_TAG = "delete-todo"
+const val DELETE_DIALOG_TAG = "delete-dialog"
+const val CANCEL_DELETE_TAG = "cancel-delete"
+const val CONFIRM_DELETE_TAG = "confirm-delete"
 
 @Composable
 fun TodoEditScreen(
@@ -81,7 +85,9 @@ fun TodoEditScreen(
             EditHeader(
                 mode = state.mode,
                 isSaving = state.isSaving,
-                saveEnabled = !state.isLoading && state.error != TodoEditError.TODO_NOT_FOUND,
+                saveEnabled = !state.isLoading &&
+                    !state.isDeleting &&
+                    state.error != TodoEditError.TODO_NOT_FOUND,
                 onBack = onBack,
                 onSave = { onEvent(TodoEditEvent.Save) },
             )
@@ -101,7 +107,7 @@ fun TodoEditScreen(
                 OutlinedTextField(
                     value = state.title,
                     onValueChange = { onEvent(TodoEditEvent.TitleChanged(it)) },
-                    enabled = !state.isLoading && !state.isSaving,
+                    enabled = !state.isLoading && !state.isSaving && !state.isDeleting,
                     label = { Text(stringResource(R.string.todo_title_label)) },
                     isError = TodoEditValidationError.TITLE_REQUIRED in state.validationErrors,
                     supportingText = if (
@@ -117,25 +123,52 @@ fun TodoEditScreen(
                 LabeledSelection(
                     label = stringResource(R.string.todo_date_label),
                     value = state.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
-                    enabled = !state.isLoading && !state.isSaving,
+                    enabled = !state.isLoading && !state.isSaving && !state.isDeleting,
                     onClick = { showDatePicker = true },
                     modifier = Modifier.testTag(EDIT_DATE_TAG),
                 )
                 TimeSelection(
                     time = state.time,
-                    enabled = !state.isLoading && !state.isSaving,
+                    enabled = !state.isLoading && !state.isSaving && !state.isDeleting,
                     onSelect = { showTimePicker = true },
                     onClear = { onEvent(TodoEditEvent.TimeCleared) },
                 )
                 CategorySelection(
                     categories = state.categories,
                     selectedCategoryId = state.selectedCategoryId,
-                    enabled = !state.isLoading && !state.isSaving,
+                    enabled = !state.isLoading && !state.isSaving && !state.isDeleting,
                     showError = TodoEditValidationError.CATEGORY_REQUIRED in state.validationErrors,
                     onSelected = { onEvent(TodoEditEvent.CategoryChanged(it)) },
                 )
+                if (state.mode == TodoEditMode.EDIT) {
+                    Button(
+                        onClick = { onEvent(TodoEditEvent.RequestDelete) },
+                        enabled = !state.isLoading &&
+                            !state.isSaving &&
+                            !state.isDeleting &&
+                            state.error != TodoEditError.TODO_NOT_FOUND,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(DELETE_TODO_TAG),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (state.isDeleting) R.string.deleting_todo
+                                else R.string.delete_todo,
+                            ),
+                        )
+                    }
+                }
             }
         }
+    }
+
+    if (state.showDeleteConfirmation) {
+        DeleteTodoConfirmationDialog(
+            isDeleting = state.isDeleting,
+            onCancel = { onEvent(TodoEditEvent.CancelDelete) },
+            onConfirm = { onEvent(TodoEditEvent.ConfirmDelete) },
+        )
     }
 
     if (showDatePicker) {
@@ -158,6 +191,44 @@ fun TodoEditScreen(
             },
         )
     }
+}
+
+@Composable
+private fun DeleteTodoConfirmationDialog(
+    isDeleting: Boolean,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isDeleting) onCancel() },
+        title = { Text(stringResource(R.string.delete_todo_dialog_title)) },
+        text = { Text(stringResource(R.string.delete_todo_dialog_message)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = !isDeleting,
+                modifier = Modifier.testTag(CONFIRM_DELETE_TAG),
+            ) {
+                Text(
+                    text = stringResource(
+                        if (isDeleting) R.string.deleting_todo
+                        else R.string.confirm_delete_todo,
+                    ),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onCancel,
+                enabled = !isDeleting,
+                modifier = Modifier.testTag(CANCEL_DELETE_TAG),
+            ) {
+                Text(stringResource(R.string.cancel_delete_todo))
+            }
+        },
+        modifier = Modifier.testTag(DELETE_DIALOG_TAG),
+    )
 }
 
 @Composable

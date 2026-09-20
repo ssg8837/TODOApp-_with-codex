@@ -180,6 +180,112 @@ class TodoEditPresenterTest {
         assertTrue(service.updated.isEmpty())
     }
 
+    @Test
+    fun createModeCannotRequestOrConfirmDelete() = runTest {
+        val service = FakeTodoService()
+        val presenter = presenter(todoService = service)
+        advanceUntilIdle()
+
+        presenter.onEvent(TodoEditEvent.RequestDelete)
+        presenter.onEvent(TodoEditEvent.ConfirmDelete)
+        advanceUntilIdle()
+
+        assertFalse(presenter.state.value.showDeleteConfirmation)
+        assertTrue(service.deletedIds.isEmpty())
+    }
+
+    @Test
+    fun editModeDeleteRequestShowsConfirmationAndCancelDoesNotCallService() = runTest {
+        val service = FakeTodoService()
+        val presenter = editPresenter(service)
+        advanceUntilIdle()
+
+        presenter.onEvent(TodoEditEvent.RequestDelete)
+        assertTrue(presenter.state.value.showDeleteConfirmation)
+
+        presenter.onEvent(TodoEditEvent.CancelDelete)
+        advanceUntilIdle()
+
+        assertFalse(presenter.state.value.showDeleteConfirmation)
+        assertTrue(service.deletedIds.isEmpty())
+    }
+
+    @Test
+    fun confirmedDeleteCallsServiceAndEmitsDeletedEffect() = runTest {
+        val service = FakeTodoService()
+        val presenter = editPresenter(service)
+        advanceUntilIdle()
+        val effect = async { presenter.effects.first() }
+
+        presenter.onEvent(TodoEditEvent.RequestDelete)
+        presenter.onEvent(TodoEditEvent.ConfirmDelete)
+        advanceUntilIdle()
+
+        assertEquals(listOf(42L), service.deletedIds)
+        assertEquals(TodoEditEffect.Deleted, effect.await())
+        assertFalse(presenter.state.value.isDeleting)
+        assertFalse(presenter.state.value.showDeleteConfirmation)
+    }
+
+    @Test
+    fun failedDeleteKeepsEditStateAndShowsError() = runTest {
+        val service = FakeTodoService().apply {
+            deleteResult = ServiceResult.Failure(ServiceError.PersistenceFailure)
+        }
+        val presenter = editPresenter(service)
+        advanceUntilIdle()
+
+        presenter.onEvent(TodoEditEvent.RequestDelete)
+        presenter.onEvent(TodoEditEvent.ConfirmDelete)
+        advanceUntilIdle()
+
+        assertEquals("기존", presenter.state.value.title)
+        assertEquals(TodoEditError.PERSISTENCE_FAILURE, presenter.state.value.error)
+        assertFalse(presenter.state.value.isDeleting)
+        assertFalse(presenter.state.value.showDeleteConfirmation)
+    }
+
+    @Test
+    fun deletingPreventsDuplicateDeleteAndSave() = runTest {
+        val gate = CompletableDeferred<ServiceResult<Unit>>()
+        val service = FakeTodoService().apply { deleteGate = gate }
+        val presenter = editPresenter(service)
+        advanceUntilIdle()
+
+        presenter.onEvent(TodoEditEvent.RequestDelete)
+        presenter.onEvent(TodoEditEvent.ConfirmDelete)
+        presenter.onEvent(TodoEditEvent.ConfirmDelete)
+        presenter.onEvent(TodoEditEvent.Save)
+        runCurrent()
+
+        assertTrue(presenter.state.value.isDeleting)
+        assertEquals(1, service.deleteAttempts)
+        assertTrue(service.updated.isEmpty())
+
+        gate.complete(ServiceResult.Success(Unit))
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun savingPreventsDeleteRequest() = runTest {
+        val gate = CompletableDeferred<ServiceResult<Todo>>()
+        val service = FakeTodoService().apply { updateGate = gate }
+        val presenter = editPresenter(service)
+        advanceUntilIdle()
+        presenter.onEvent(TodoEditEvent.TitleChanged("저장 중"))
+
+        presenter.onEvent(TodoEditEvent.Save)
+        presenter.onEvent(TodoEditEvent.RequestDelete)
+        runCurrent()
+
+        assertTrue(presenter.state.value.isSaving)
+        assertFalse(presenter.state.value.showDeleteConfirmation)
+        assertTrue(service.deletedIds.isEmpty())
+
+        gate.complete(ServiceResult.Success(todo(id = 42, title = "저장 중")))
+        advanceUntilIdle()
+    }
+
     private fun presenter(
         todoService: FakeTodoService,
         mode: TodoEditMode = TodoEditMode.CREATE,
@@ -193,12 +299,26 @@ class TodoEditPresenterTest {
         clock = FIXED_CLOCK,
     )
 
+    private fun editPresenter(service: FakeTodoService): TodoEditPresenter {
+        service.getResult = ServiceResult.Success(todo(id = 42, title = "기존"))
+        return presenter(
+            todoService = service,
+            mode = TodoEditMode.EDIT,
+            todoId = 42,
+        )
+    }
+
     private class FakeTodoService : TodoService {
         val created = mutableListOf<Todo>()
         val updated = mutableListOf<Todo>()
         var createAttempts = 0
         var createResult: ServiceResult<Todo>? = null
         var createGate: CompletableDeferred<ServiceResult<Todo>>? = null
+        var updateGate: CompletableDeferred<ServiceResult<Todo>>? = null
+        val deletedIds = mutableListOf<Long>()
+        var deleteAttempts = 0
+        var deleteResult: ServiceResult<Unit> = ServiceResult.Success(Unit)
+        var deleteGate: CompletableDeferred<ServiceResult<Unit>>? = null
         var getResult: ServiceResult<Todo> = ServiceResult.Failure(ServiceError.TodoNotFound)
 
         override suspend fun create(todo: Todo): ServiceResult<Todo> {
@@ -209,11 +329,15 @@ class TodoEditPresenterTest {
 
         override suspend fun update(todo: Todo): ServiceResult<Todo> {
             updated += todo
-            return ServiceResult.Success(todo)
+            return updateGate?.await() ?: ServiceResult.Success(todo)
         }
 
         override suspend fun getById(todoId: Long): ServiceResult<Todo> = getResult
-        override suspend fun delete(todoId: Long): ServiceResult<Unit> = error("Not used")
+        override suspend fun delete(todoId: Long): ServiceResult<Unit> {
+            deleteAttempts++
+            deletedIds += todoId
+            return deleteGate?.await() ?: deleteResult
+        }
         override suspend fun setCompleted(todoId: Long, completed: Boolean): ServiceResult<Todo> = error("Not used")
         override fun observeByDate(date: LocalDate): Flow<ServiceResult<List<Todo>>> = error("Not used")
         override fun observeFiltered(date: LocalDate, categoryId: Long?, incompleteOnly: Boolean): Flow<ServiceResult<List<Todo>>> = error("Not used")

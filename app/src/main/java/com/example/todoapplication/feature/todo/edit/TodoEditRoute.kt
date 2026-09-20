@@ -18,6 +18,7 @@ fun TodoEditRoute(
     todoId: Long? = null,
     onBack: () -> Unit,
     onSaved: () -> Unit,
+    onDeleted: () -> Unit,
 ) {
     val application = LocalContext.current.applicationContext as TodoApplication
     val factory = remember(application.container, mode, initialDate, todoId) {
@@ -36,6 +37,7 @@ fun TodoEditRoute(
         presenter.effects.collect { effect ->
             when (effect) {
                 TodoEditEffect.Saved -> onSaved()
+                TodoEditEffect.Deleted -> onDeleted()
             }
         }
     }

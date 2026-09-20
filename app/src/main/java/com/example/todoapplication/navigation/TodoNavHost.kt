@@ -38,6 +38,7 @@ fun TodoNavHost(navController: NavHostController) {
                 initialDate = initialDate,
                 onBack = navController::popBackStack,
                 onSaved = navController::popBackStack,
+                onDeleted = navController::popBackStack,
             )
         }
         composable(
@@ -54,6 +55,7 @@ fun TodoNavHost(navController: NavHostController) {
                 todoId = todoId,
                 onBack = navController::popBackStack,
                 onSaved = navController::popBackStack,
+                onDeleted = navController::popBackStack,
             )
         }
     }

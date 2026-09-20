@@ -1,13 +1,18 @@
 package com.example.todoapplication.feature.todo.edit
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.todoapplication.domain.model.CategoryColor
 import com.example.todoapplication.ui.theme.ToDOApplicationTheme
@@ -105,6 +110,87 @@ class TodoEditScreenTest {
         composeRule.onNodeWithText("카테고리를 선택해주세요.").assertIsDisplayed()
     }
 
+    @Test
+    fun createModeDoesNotShowDeleteButton() {
+        setScreen(state())
+
+        composeRule.onAllNodesWithTag(DELETE_TODO_TAG).assertCountEquals(0)
+    }
+
+    @Test
+    fun editDeleteRequestShowsDialogAndCancelClosesIt() {
+        val events = mutableListOf<TodoEditEvent>()
+        var currentState by mutableStateOf(state(mode = TodoEditMode.EDIT, title = "기존"))
+        composeRule.setContent {
+            ToDOApplicationTheme {
+                TodoEditScreen(
+                    state = currentState,
+                    onEvent = { event ->
+                        events += event
+                        currentState = when (event) {
+                            TodoEditEvent.RequestDelete -> {
+                                currentState.copy(showDeleteConfirmation = true)
+                            }
+                            TodoEditEvent.CancelDelete -> {
+                                currentState.copy(showDeleteConfirmation = false)
+                            }
+                            else -> currentState
+                        }
+                    },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DELETE_TODO_TAG).assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(DELETE_DIALOG_TAG).assertIsDisplayed()
+        composeRule.onNodeWithText("삭제한 TODO는 복구할 수 없습니다.", substring = true)
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(CANCEL_DELETE_TAG).performClick()
+        composeRule.onAllNodesWithTag(DELETE_DIALOG_TAG).assertCountEquals(0)
+
+        composeRule.runOnIdle {
+            assertTrue(TodoEditEvent.RequestDelete in events)
+            assertTrue(TodoEditEvent.CancelDelete in events)
+        }
+    }
+
+    @Test
+    fun deleteConfirmationEmitsConfirmEvent() {
+        val events = mutableListOf<TodoEditEvent>()
+        setScreen(
+            state(
+                mode = TodoEditMode.EDIT,
+                title = "기존",
+                showDeleteConfirmation = true,
+            ),
+            events::add,
+        )
+
+        composeRule.onNodeWithTag(CONFIRM_DELETE_TAG).performClick()
+
+        composeRule.runOnIdle {
+            assertTrue(TodoEditEvent.ConfirmDelete in events)
+        }
+    }
+
+    @Test
+    fun deletingDisablesSaveDeleteAndDialogActions() {
+        setScreen(
+            state(
+                mode = TodoEditMode.EDIT,
+                title = "기존",
+                showDeleteConfirmation = true,
+                isDeleting = true,
+            ),
+        )
+
+        composeRule.onNodeWithTag(SAVE_TODO_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(DELETE_TODO_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(CANCEL_DELETE_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(CONFIRM_DELETE_TAG).assertIsNotEnabled()
+    }
+
     private fun setScreen(
         state: TodoEditUiState,
         onEvent: (TodoEditEvent) -> Unit = {},
@@ -123,6 +209,8 @@ class TodoEditScreenTest {
         time: LocalTime? = null,
         selectedCategoryId: Long? = 1,
         isSaving: Boolean = false,
+        showDeleteConfirmation: Boolean = false,
+        isDeleting: Boolean = false,
         validationErrors: Set<TodoEditValidationError> = emptySet(),
     ) = TodoEditUiState(
         mode = mode,
@@ -137,6 +225,8 @@ class TodoEditScreenTest {
         ),
         isLoading = false,
         isSaving = isSaving,
+        showDeleteConfirmation = showDeleteConfirmation,
+        isDeleting = isDeleting,
         validationErrors = validationErrors,
     )
 }

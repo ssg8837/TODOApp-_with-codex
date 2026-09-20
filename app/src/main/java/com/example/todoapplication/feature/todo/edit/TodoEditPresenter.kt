@@ -75,6 +75,9 @@ class TodoEditPresenter(
                 )
             }
             TodoEditEvent.Save -> save()
+            TodoEditEvent.RequestDelete -> requestDelete()
+            TodoEditEvent.ConfirmDelete -> confirmDelete()
+            TodoEditEvent.CancelDelete -> cancelDelete()
         }
     }
 
@@ -147,7 +150,7 @@ class TodoEditPresenter(
 
     private fun save() {
         val current = mutableState.value
-        if (current.isLoading || current.isSaving) return
+        if (current.isLoading || current.isSaving || current.isDeleting) return
         if (current.mode == TodoEditMode.EDIT && originalTodo == null) {
             mutableState.update { it.copy(error = TodoEditError.TODO_NOT_FOUND) }
             return
@@ -206,6 +209,55 @@ class TodoEditPresenter(
                     validationErrors = result.error.validationErrors(),
                     error = result.error.toEditError(),
                 )
+            }
+        }
+    }
+
+    private fun requestDelete() {
+        val current = mutableState.value
+        val canDelete = current.mode == TodoEditMode.EDIT &&
+            current.todoId != null &&
+            current.todoId > 0 &&
+            originalTodo != null &&
+            !current.isLoading &&
+            !current.isSaving &&
+            !current.isDeleting
+        if (!canDelete) return
+        mutableState.update { it.copy(showDeleteConfirmation = true, error = null) }
+    }
+
+    private fun cancelDelete() {
+        if (mutableState.value.isDeleting) return
+        mutableState.update { it.copy(showDeleteConfirmation = false) }
+    }
+
+    private fun confirmDelete() {
+        val current = mutableState.value
+        val todoId = current.todoId ?: return
+        val canDelete = current.mode == TodoEditMode.EDIT &&
+            todoId > 0 &&
+            originalTodo != null &&
+            current.showDeleteConfirmation &&
+            !current.isLoading &&
+            !current.isSaving &&
+            !current.isDeleting
+        if (!canDelete) return
+        mutableState.update { it.copy(isDeleting = true, error = null) }
+        viewModelScope.launch {
+            when (val result = todoService.delete(todoId)) {
+                is ServiceResult.Success -> {
+                    mutableState.update {
+                        it.copy(isDeleting = false, showDeleteConfirmation = false)
+                    }
+                    effectChannel.send(TodoEditEffect.Deleted)
+                }
+                is ServiceResult.Failure -> mutableState.update {
+                    it.copy(
+                        isDeleting = false,
+                        showDeleteConfirmation = false,
+                        error = result.error.toEditError(),
+                    )
+                }
             }
         }
     }

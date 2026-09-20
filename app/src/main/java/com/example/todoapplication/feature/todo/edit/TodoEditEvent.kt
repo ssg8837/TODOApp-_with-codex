@@ -15,8 +15,16 @@ sealed interface TodoEditEvent {
     data class CategoryChanged(val categoryId: Long) : TodoEditEvent
 
     data object Save : TodoEditEvent
+
+    data object RequestDelete : TodoEditEvent
+
+    data object ConfirmDelete : TodoEditEvent
+
+    data object CancelDelete : TodoEditEvent
 }
 
 sealed interface TodoEditEffect {
     data object Saved : TodoEditEffect
+
+    data object Deleted : TodoEditEffect
 }

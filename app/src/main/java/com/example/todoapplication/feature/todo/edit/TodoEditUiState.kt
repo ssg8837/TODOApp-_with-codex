@@ -14,6 +14,8 @@ data class TodoEditUiState(
     val categories: List<TodoEditCategoryUiModel> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val showDeleteConfirmation: Boolean = false,
+    val isDeleting: Boolean = false,
     val validationErrors: Set<TodoEditValidationError> = emptySet(),
     val error: TodoEditError? = null,
 )

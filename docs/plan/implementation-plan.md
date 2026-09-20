@@ -473,14 +473,14 @@ Todo 목록 Presenter 상태를 렌더링하는 첫 제품 화면과 최소 Navi
 
 ### 목적
 
-Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록과 영속화를 연결한다.
+Reminder를 제외한 Todo 등록·수정 흐름을 완성하고 목록과 영속화를 연결한다.
 
 ### 구현 대상
 
 - TodoEdit Presenter, UiState, Event와 Factory
 - TodoEdit Route/Screen
 - 제목, 날짜, 선택 시간, Category 입력
-- 저장, ID 기반 수정 조회와 AlertDialog 삭제
+- 저장과 ID 기반 수정 조회
 - TodoList↔TodoEdit Navigation
 
 ### 생성 또는 수정할 예상 파일
@@ -510,7 +510,6 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 - 과거 날짜와 시간을 허용한다.
 - 수정 화면에는 Todo ID만 전달하고 `TodoService`에서 다시 조회한다.
 - 저장 직전 최종 검증은 Service에 위임하고 Presenter는 중복 저장 방지와 실패 시 편집값 유지를 구현한다.
-- TODO 삭제는 AlertDialog 확인 후 수행하고 Todo/Reminder 비즈니스 흐름은 Service에 위임한다.
 - 성공 이동과 메시지는 재구성 시 중복되지 않게 처리한다.
 
 ### 테스트 항목
@@ -519,13 +518,12 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 - 과거 날짜·시간 저장
 - 신규 등록, ID 조회, 수정과 존재하지 않는 ID
 - 저장 중 중복 요청 및 실패 시 입력 유지
-- AlertDialog 취소/확정과 삭제 실패
 - 저장 후 목록 반영 및 앱 재실행 후 유지
 - Presenter JVM 테스트, CRUD Compose/Room 계측 테스트
 
 ### 완료 조건
 
-- Reminder를 제외한 Todo 등록·조회·수정·삭제·완료 변경이 동작한다.
+- Reminder를 제외한 Todo 등록·조회·수정·완료 변경이 동작한다.
 - UI와 DB 상태가 일치하고 재실행 후 데이터가 유지된다.
 - CRUD 관련 자동 테스트와 빌드가 통과한다.
 
@@ -535,6 +533,66 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 - Category drag & drop과 팔레트
 - 복합 필터
 - Reminder 선택, Notification과 Alarm
+
+## Phase 7.1: TODO 삭제
+
+### 목적
+
+수정 화면에서 명시적인 확인 후 Todo를 삭제하고 목록으로 복귀하는 흐름을 완성한다.
+
+### 구현 대상
+
+- TodoEdit 삭제 상태, 이벤트와 일회성 Effect
+- 수정 화면 전용 삭제 버튼과 확인 AlertDialog
+- 기존 `TodoService.delete()` 호출 및 삭제 성공 Navigation
+
+### 생성 또는 수정할 예상 파일
+
+- `app/src/main/java/com/example/todoapplication/feature/todo/edit/TodoEditUiState.kt`
+- `app/src/main/java/com/example/todoapplication/feature/todo/edit/TodoEditEvent.kt`
+- `app/src/main/java/com/example/todoapplication/feature/todo/edit/TodoEditPresenter.kt`
+- `app/src/main/java/com/example/todoapplication/feature/todo/edit/TodoEditRoute.kt`
+- `app/src/main/java/com/example/todoapplication/feature/todo/edit/TodoEditScreen.kt`
+- `app/src/main/java/com/example/todoapplication/navigation/TodoNavHost.kt`
+- `app/src/main/res/values/strings.xml`
+- `app/src/test/java/com/example/todoapplication/feature/todo/edit/TodoEditPresenterTest.kt`
+- `app/src/androidTest/java/com/example/todoapplication/feature/todo/edit/TodoEditScreenTest.kt`
+- `app/src/androidTest/java/com/example/todoapplication/TodoEditNavigationTest.kt`
+
+### 의존하는 이전 Phase
+
+- Phase 7
+
+### 구현 상세
+
+- 삭제 버튼은 수정 모드에서만 제공한다.
+- 삭제 요청과 실제 삭제 실행을 분리하고 AlertDialog에서 확정한 경우에만 Service를 호출한다.
+- 저장과 삭제가 동시에 실행되지 않도록 상태로 중복 요청을 차단한다.
+- 삭제 성공은 일회성 Effect로 전달하고 Route가 목록으로 복귀한다.
+- 삭제 실패 시 수정 화면과 입력값을 유지하고 presentation 오류를 표시한다.
+- Room의 Todo 삭제 및 연결 Reminder cascade 계약을 재사용하며 시스템 Alarm 취소는 구현하지 않는다.
+
+### 테스트 항목
+
+- 신규 모드 삭제 차단, 수정 모드 확인 상태와 취소
+- 삭제 확정, 성공 Effect와 실패 오류 변환
+- 중복 삭제 및 저장·삭제 상호 배제
+- 수정 화면 삭제 버튼과 AlertDialog 취소·확정
+- 실제 Room과 Navigation을 통한 생성→삭제→목록 반영
+- 기존 Todo 삭제 시 Reminder cascade 삭제 회귀
+
+### 완료 조건
+
+- 사용자가 수정 화면에서 확인한 Todo만 삭제된다.
+- 삭제 성공 시 목록으로 복귀하고 Room Flow를 통해 삭제 결과가 반영된다.
+- 실패 시 수정 화면과 입력이 유지되며 중복 저장·삭제가 발생하지 않는다.
+- 관련 JVM, Compose UI, 통합 및 기존 회귀 테스트가 통과한다.
+
+### 해당 Phase에서 수정하면 안 되는 범위
+
+- Category 관리, drag & drop과 색상 편집
+- Category 및 미완료 필터
+- Reminder 설정 UI와 시스템 Alarm/Notification
 
 ## Phase 8: Category 관리
 
@@ -564,7 +622,7 @@ Reminder를 제외한 Todo 등록·수정·삭제 흐름을 완성하고 목록�
 
 ### 의존하는 이전 Phase
 
-- Phase 7
+- Phase 7.1
 
 ### 구현 상세
 

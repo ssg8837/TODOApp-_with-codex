@@ -49,6 +49,15 @@ interface FeaturePresenter {
 - 드래그 중 순서는 View의 일시적인 제스처 미리보기이며 완료·취소·원본 갱신 시 폐기한다. 저장 실패 시에도 Flow의 확정 순서를 표시한다.
 - 길게 누른 핸들 드래그와 접근성 위/아래 이동은 동일한 재정렬 이벤트를 사용한다.
 
+### Phase 10 TODO 목록 필터
+
+- `TodoListUiState`는 `selectedCategoryId: Long?`, `incompleteOnly`, 저장 순서의 `categories: List<CategoryFilterUiModel>`, `emptyState`를 제공한다.
+- `SelectCategory(null)`은 전체, `SetIncompleteOnly(false)`는 완료 여부 전체 선택이다.
+- 날짜·Category·완료 조건을 하나의 상태로 관리하고 `flatMapLatest`로 기존 `TodoService.observeFiltered()` 조회를 교체한다. 결과 적용 전 현재 조건과 일치하는지 확인한다.
+- Category Flow는 한 번 구독한다. 선택된 Category가 삭제되면 선택지와 선택값을 한 UiState 갱신에서 변경한 뒤 새 결과를 표시한다.
+- 필터 결과가 비었을 때만 `observeByDate()`를 추가 구독하여 날짜 자체 빈 상태를 구분한다. 같은 결과의 반복 수신은 새 구독을 만들지 않으며 필터 변경·결과 발생 시 추가 구독을 취소한다.
+- Category 이름·색상·순서 변경은 `combine`으로 반영하고 TODO 완료 후 목록을 직접 삭제하지 않는다.
+
 ## Application Service 계약
 
 - `TodoService`: Todo 등록·수정·삭제·완료 변경·날짜별 조회, Todo Validator 적용과 향후 Reminder/Alarm 연계 조정

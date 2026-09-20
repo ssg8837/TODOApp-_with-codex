@@ -111,6 +111,7 @@ fun TodoListScreen(
                 onNextDate = { onEvent(TodoListEvent.NextDate) },
                 onSelectDate = { isDatePickerVisible = true },
             )
+            TodoListFilters(state = state, onEvent = onEvent)
             if (state.isLoading) {
                 LinearProgressIndicator(
                     modifier = Modifier
@@ -124,6 +125,7 @@ fun TodoListScreen(
             TodoListContent(
                 todos = state.todos,
                 showEmptyState = !state.isLoading && state.error == null,
+                emptyState = state.emptyState,
                 onCompletedChange = { id, completed ->
                     onEvent(TodoListEvent.SetCompleted(id, completed))
                 },
@@ -195,6 +197,7 @@ private fun DateHeader(
 private fun TodoListContent(
     todos: List<TodoListItemUiModel>,
     showEmptyState: Boolean,
+    emptyState: TodoListEmptyState,
     onCompletedChange: (Long, Boolean) -> Unit,
     onEditTodo: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -203,7 +206,10 @@ private fun TodoListContent(
         Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             if (showEmptyState) {
                 Text(
-                    text = stringResource(R.string.empty_todo_list),
+                    text = stringResource(
+                        if (emptyState == TodoListEmptyState.NO_MATCHES) R.string.empty_filtered_todo_list
+                        else R.string.empty_todo_list,
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

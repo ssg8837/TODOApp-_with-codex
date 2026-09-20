@@ -76,4 +76,8 @@
     <string name="category_move_down">한 칸 아래로 이동</string>
     <string name="category_drag">%1$s 순서 변경: 길게 누른 후 이동</string>
     <string name="error_category_order">Category 순서를 저장하지 못했습니다. 목록을 확인한 후 다시 시도해주세요.</string>
+    <string name="todo_category_filter_label">Category: </string>
+    <string name="filter_all">전체</string>
+    <string name="filter_incomplete">미완료</string>
+    <string name="empty_filtered_todo_list">조건에 해당하는 TODO가 없습니다.</string>
 </resources>

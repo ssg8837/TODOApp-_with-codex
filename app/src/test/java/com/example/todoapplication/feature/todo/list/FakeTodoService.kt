@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 
 internal class FakeTodoService : TodoService {
     val observedDates = mutableListOf<LocalDate>()
+    val dateOnlyCalls = mutableListOf<LocalDate>()
+    val filteredCalls = mutableListOf<FilterQuery>()
+    private val filteredFlows = mutableMapOf<FilterQuery, MutableSharedFlow<ServiceResult<List<Todo>>>>()
     val completionCalls = mutableListOf<Pair<Long, Boolean>>()
     var completionResult: ServiceResult<Todo> =
         ServiceResult.Failure(ServiceError.TodoNotFound)
@@ -19,7 +22,7 @@ internal class FakeTodoService : TodoService {
         dateFlows.getOrPut(date) { MutableSharedFlow(replay = 1) }
 
     override fun observeByDate(date: LocalDate): Flow<ServiceResult<List<Todo>>> {
-        observedDates += date
+        dateOnlyCalls += date
         return dateFlow(date)
     }
 
@@ -43,7 +46,24 @@ internal class FakeTodoService : TodoService {
         date: LocalDate,
         categoryId: Long?,
         incompleteOnly: Boolean,
-    ): Flow<ServiceResult<List<Todo>>> = error("Not used by TodoListPresenter in Phase 5")
+    ): Flow<ServiceResult<List<Todo>>> {
+        observedDates += date
+        filteredCalls += FilterQuery(date, categoryId, incompleteOnly)
+        return filterFlow(date, categoryId, incompleteOnly)
+    }
+
+    fun filterFlow(
+        date: LocalDate,
+        categoryId: Long? = null,
+        incompleteOnly: Boolean = false,
+    ): MutableSharedFlow<ServiceResult<List<Todo>>> {
+        if (categoryId == null && !incompleteOnly) return dateFlow(date)
+        return filteredFlows.getOrPut(FilterQuery(date, categoryId, incompleteOnly)) {
+            MutableSharedFlow(replay = 1)
+        }
+    }
+
+    data class FilterQuery(val date: LocalDate, val categoryId: Long?, val incompleteOnly: Boolean)
 
     private fun <T> unused(): ServiceResult<T> = error("Not used by TodoListPresenter in Phase 5")
 }

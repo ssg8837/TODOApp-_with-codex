@@ -3,6 +3,9 @@ package com.example.todoapplication.feature.todo.list
 import java.time.LocalDate
 
 sealed interface TodoListEvent {
+    data class SelectCategory(val categoryId: Long?) : TodoListEvent
+
+    data class SetIncompleteOnly(val enabled: Boolean) : TodoListEvent
     data object PreviousDate : TodoListEvent
 
     data object NextDate : TodoListEvent

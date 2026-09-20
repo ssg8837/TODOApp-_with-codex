@@ -16,9 +16,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -28,53 +30,114 @@ class TodoListPresenter(
     private val categoryService: CategoryService,
     clock: Clock = Clock.systemDefaultZone(),
 ) : ViewModel() {
-    private val selectedDate = MutableStateFlow(LocalDate.now(clock))
-    private val mutableState = MutableStateFlow(
-        TodoListUiState(selectedDate = selectedDate.value),
-    )
-
+    private val query = MutableStateFlow(ListQuery(LocalDate.now(clock)))
+    private val categoryResults = MutableStateFlow<ServiceResult<List<Category>>?>(null)
+    private val mutableState = MutableStateFlow(TodoListUiState(selectedDate = query.value.date))
     val state: StateFlow<TodoListUiState> = mutableState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            selectedDate
-                .flatMapLatest(::observeDate)
-                .collect(::applyLoadState)
+            categoryService.observeAll().collect { result ->
+                if (result is ServiceResult.Success) {
+                    val choices = result.value.map { CategoryFilterUiModel(it.id, it.name, it.color) }
+                    val selected = query.value.categoryId
+                    if (selected != null && choices.none { it.id == selected }) {
+                        // Remove the deleted option and its selection in the same state update.
+                        changeQuery(query.value.copy(categoryId = null), choices)
+                    } else {
+                        mutableState.update { it.copy(categories = choices) }
+                    }
+                }
+                categoryResults.value = result
+            }
+        }
+        viewModelScope.launch {
+            query.flatMapLatest { current ->
+                combine(
+                    observeTodos(current),
+                    categoryResults.filterNotNull(),
+                ) { todos, categories -> ListResult(current, todos, categories) }
+            }.collect(::applyResult)
         }
     }
 
     fun onEvent(event: TodoListEvent) {
+        val current = query.value
         when (event) {
-            TodoListEvent.PreviousDate -> selectDate(selectedDate.value.minusDays(1))
-            TodoListEvent.NextDate -> selectDate(selectedDate.value.plusDays(1))
-            is TodoListEvent.SelectDate -> selectDate(event.date)
+            TodoListEvent.PreviousDate -> changeQuery(current.copy(date = current.date.minusDays(1)))
+            TodoListEvent.NextDate -> changeQuery(current.copy(date = current.date.plusDays(1)))
+            is TodoListEvent.SelectDate -> changeQuery(current.copy(date = event.date))
+            is TodoListEvent.SelectCategory -> {
+                val id = event.categoryId?.takeIf { id -> state.value.categories.any { it.id == id } }
+                changeQuery(current.copy(categoryId = id))
+            }
+            is TodoListEvent.SetIncompleteOnly -> changeQuery(current.copy(incompleteOnly = event.enabled))
             is TodoListEvent.SetCompleted -> setCompleted(event.todoId, event.completed)
         }
     }
 
-    private fun selectDate(date: LocalDate) {
-        if (selectedDate.value == date) return
+    private fun changeQuery(
+        next: ListQuery,
+        categories: List<CategoryFilterUiModel> = state.value.categories,
+    ) {
+        if (next == query.value) return
+        query.value = next
         mutableState.update {
             it.copy(
-                selectedDate = date,
+                selectedDate = next.date,
+                selectedCategoryId = next.categoryId,
+                incompleteOnly = next.incompleteOnly,
+                categories = categories,
                 todos = emptyList(),
                 isLoading = true,
                 error = null,
+                emptyState = TodoListEmptyState.NO_TODOS,
             )
         }
-        selectedDate.value = date
     }
 
-    private fun observeDate(date: LocalDate): Flow<ListLoadState> =
-        combine(
-            todoService.observeByDate(date),
-            categoryService.observeAll(),
-            ::combineTodoAndCategoryResults,
-        )
-            .map<ServiceResult<List<TodoListItemUiModel>>, ListLoadState> { result ->
-                ListLoadState.Result(date, result)
+    private fun observeTodos(current: ListQuery): Flow<TodosResult> =
+        todoService.observeFiltered(current.date, current.categoryId, current.incompleteOnly)
+            .distinctUntilChanged()
+            .flatMapLatest { result ->
+                if (result is ServiceResult.Success && result.value.isEmpty() &&
+                    (current.categoryId != null || current.incompleteOnly)
+                ) {
+                    // Only empty filtered results need an additional date-level observation.
+                    todoService.observeByDate(current.date).map { dateResult ->
+                        when (dateResult) {
+                            is ServiceResult.Success -> TodosResult(
+                                result,
+                                if (dateResult.value.isEmpty()) TodoListEmptyState.NO_TODOS
+                                else TodoListEmptyState.NO_MATCHES,
+                            )
+                            is ServiceResult.Failure -> TodosResult(dateResult)
+                        }
+                    }
+                } else {
+                    flowOf(TodosResult(result))
+                }
             }
-            .onStart { emit(ListLoadState.Loading(date)) }
+
+    private fun applyResult(result: ListResult) {
+        if (result.query != query.value) return
+        val mapped = combineTodoAndCategoryResults(result.todos.result, result.categories)
+        mutableState.update {
+            when (mapped) {
+                is ServiceResult.Success -> it.copy(
+                    todos = mapped.value,
+                    isLoading = false,
+                    error = null,
+                    emptyState = result.todos.emptyState,
+                )
+                is ServiceResult.Failure -> it.copy(
+                    todos = emptyList(),
+                    isLoading = false,
+                    error = mapped.error.toPresentationError(),
+                )
+            }
+        }
+    }
 
     private fun combineTodoAndCategoryResults(
         todoResult: ServiceResult<List<Todo>>,
@@ -82,7 +145,6 @@ class TodoListPresenter(
     ): ServiceResult<List<TodoListItemUiModel>> {
         if (todoResult is ServiceResult.Failure) return todoResult
         if (categoryResult is ServiceResult.Failure) return categoryResult
-
         val todos = (todoResult as ServiceResult.Success).value
         val categoriesById = (categoryResult as ServiceResult.Success).value.associateBy { it.id }
         val items = todos.map { todo ->
@@ -98,43 +160,6 @@ class TodoListPresenter(
             )
         }
         return ServiceResult.Success(items)
-    }
-
-    private fun applyLoadState(loadState: ListLoadState) {
-        if (loadState.date != selectedDate.value) return
-        when (loadState) {
-            is ListLoadState.Loading -> mutableState.update {
-                it.copy(
-                    selectedDate = loadState.date,
-                    todos = emptyList(),
-                    isLoading = true,
-                    error = null,
-                )
-            }
-            is ListLoadState.Result -> applyListResult(loadState.date, loadState.result)
-        }
-    }
-
-    private fun applyListResult(
-        date: LocalDate,
-        result: ServiceResult<List<TodoListItemUiModel>>,
-    ) {
-        mutableState.update { current ->
-            when (result) {
-                is ServiceResult.Success -> current.copy(
-                    selectedDate = date,
-                    todos = result.value,
-                    isLoading = false,
-                    error = null,
-                )
-                is ServiceResult.Failure -> current.copy(
-                    selectedDate = date,
-                    todos = emptyList(),
-                    isLoading = false,
-                    error = result.error.toPresentationError(),
-                )
-            }
-        }
     }
 
     private fun setCompleted(todoId: Long, completed: Boolean) {
@@ -156,14 +181,20 @@ class TodoListPresenter(
         else -> TodoListError.OPERATION_FAILED
     }
 
-    private sealed interface ListLoadState {
-        val date: LocalDate
+    private data class ListQuery(
+        val date: LocalDate,
+        val categoryId: Long? = null,
+        val incompleteOnly: Boolean = false,
+    )
 
-        data class Loading(override val date: LocalDate) : ListLoadState
+    private data class TodosResult(
+        val result: ServiceResult<List<Todo>>,
+        val emptyState: TodoListEmptyState = TodoListEmptyState.NO_TODOS,
+    )
 
-        data class Result(
-            override val date: LocalDate,
-            val result: ServiceResult<List<TodoListItemUiModel>>,
-        ) : ListLoadState
-    }
+    private data class ListResult(
+        val query: ListQuery,
+        val todos: TodosResult,
+        val categories: ServiceResult<List<Category>>,
+    )
 }

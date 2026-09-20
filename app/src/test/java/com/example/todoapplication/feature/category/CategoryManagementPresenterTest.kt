@@ -220,6 +220,93 @@ class CategoryManagementPresenterTest {
         order: Int,
         color: CategoryColor = CategoryColor.RED,
     ) = Category(id, name, color, order, false, Instant.EPOCH)
+
+    @Test
+    fun reorderUsesServiceOnceAndOnlyFlowChangesConfirmedOrder() = runTest {
+        val service = FakeCategoryManagementService().apply { reorderGate = CompletableDeferred() }
+        val original = listOf(system(), user(2, "업무", 1), user(3, "개인", 2))
+        val presenter = loadedPresenter(service, original)
+        presenter.onEvent(CategoryManagementEvent.ReorderCategories(listOf(3, 2)))
+        presenter.onEvent(CategoryManagementEvent.ReorderCategories(listOf(2, 3)))
+        presenter.onEvent(CategoryManagementEvent.RequestCreate)
+        advanceUntilIdle()
+        assertEquals(listOf(listOf(3L, 2L)), service.reordered)
+        assertTrue(presenter.state.value.isReordering)
+        assertEquals(listOf(1L, 2L, 3L), presenter.state.value.categories.map { it.id })
+        service.emit(listOf(original[0], original[2], original[1]))
+        service.reorderGate?.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(presenter.state.value.isReordering)
+        assertEquals(listOf(1L, 3L, 2L), presenter.state.value.categories.map { it.id })
+    }
+
+    @Test
+    fun systemReorderAndColorEditAreBlockedWithoutServiceWrites() = runTest {
+        val service = FakeCategoryManagementService()
+        val presenter = loadedPresenter(service)
+        presenter.onEvent(CategoryManagementEvent.ReorderCategories(listOf(1)))
+        assertEquals(CategoryManagementError.SYSTEM_OPERATION_PROHIBITED, presenter.state.value.error)
+        presenter.onEvent(CategoryManagementEvent.RequestEdit(1))
+        presenter.onEvent(CategoryManagementEvent.CategoryColorChanged(CategoryColor.BLUE))
+        presenter.onEvent(CategoryManagementEvent.SaveCategory)
+        advanceUntilIdle()
+        assertTrue(service.reordered.isEmpty())
+        assertTrue(service.updated.isEmpty())
+        assertEquals(CategoryColor.NEUTRAL, presenter.state.value.selectedCategoryColor)
+    }
+
+    @Test
+    fun invalidOrdersAndPersistenceFailureKeepConfirmedOrder() = runTest {
+        val service = FakeCategoryManagementService()
+        val presenter = loadedPresenter(service, listOf(system(), user(2, "업무", 1)))
+        for (ids in listOf(listOf(99L), listOf(2L, 2L), emptyList())) {
+            service.reorderResult = ServiceResult.Failure(ServiceError.InvalidCategoryOrder)
+            presenter.onEvent(CategoryManagementEvent.ReorderCategories(ids))
+            advanceUntilIdle()
+            assertEquals(CategoryManagementError.INVALID_ORDER, presenter.state.value.error)
+            assertEquals(listOf(1L, 2L), presenter.state.value.categories.map { it.id })
+        }
+        service.reorderResult = ServiceResult.Failure(ServiceError.PersistenceFailure)
+        presenter.onEvent(CategoryManagementEvent.ReorderCategories(listOf(2)))
+        advanceUntilIdle()
+        assertEquals(CategoryManagementError.PERSISTENCE_FAILURE, presenter.state.value.error)
+        assertFalse(presenter.state.value.isReordering)
+    }
+
+    @Test
+    fun createUsesSelectedColorAndNextEditorResetsToNeutral() = runTest {
+        val service = FakeCategoryManagementService()
+        val presenter = loadedPresenter(service)
+        presenter.onEvent(CategoryManagementEvent.RequestCreate)
+        presenter.onEvent(CategoryManagementEvent.CategoryNameChanged("색상"))
+        presenter.onEvent(CategoryManagementEvent.CategoryColorChanged(CategoryColor.PINK))
+        presenter.onEvent(CategoryManagementEvent.SaveCategory)
+        advanceUntilIdle()
+        assertEquals(CategoryColor.PINK, service.created.single().color)
+        presenter.onEvent(CategoryManagementEvent.RequestCreate)
+        assertEquals(CategoryColor.NEUTRAL, presenter.state.value.selectedCategoryColor)
+    }
+
+    @Test
+    fun colorOnlyEditPreservesIdentityAndFailurePreservesInput() = runTest {
+        val service = FakeCategoryManagementService()
+        val original = user(2, "업무", 4, CategoryColor.RED)
+        val presenter = loadedPresenter(service, listOf(system(), original))
+        presenter.onEvent(CategoryManagementEvent.RequestEdit(2))
+        assertEquals(CategoryColor.RED, presenter.state.value.selectedCategoryColor)
+        presenter.onEvent(CategoryManagementEvent.CategoryColorChanged(CategoryColor.BLUE))
+        service.updateResult = ServiceResult.Failure(ServiceError.PersistenceFailure)
+        presenter.onEvent(CategoryManagementEvent.SaveCategory)
+        advanceUntilIdle()
+        assertEquals(original.copy(color = CategoryColor.BLUE), service.updated.single())
+        assertEquals(CategoryColor.BLUE, presenter.state.value.selectedCategoryColor)
+        assertEquals("업무", presenter.state.value.categoryNameInput)
+        assertEquals(CategoryEditorMode.EDIT, presenter.state.value.editorMode)
+        service.updateResult = null
+        presenter.onEvent(CategoryManagementEvent.SaveCategory)
+        advanceUntilIdle()
+        assertEquals(CategoryEditorMode.NONE, presenter.state.value.editorMode)
+    }
 }
 
 private class FakeCategoryManagementService : CategoryService {
@@ -232,6 +319,9 @@ private class FakeCategoryManagementService : CategoryService {
     var deleteResult: ServiceResult<Unit> = ServiceResult.Success(Unit)
     var createGate: CompletableDeferred<Unit>? = null
     var deleteGate: CompletableDeferred<Unit>? = null
+    var reorderGate: CompletableDeferred<Unit>? = null
+    var reorderResult: ServiceResult<Unit> = ServiceResult.Success(Unit)
+    val reordered = mutableListOf<List<Long>>()
 
     suspend fun emit(categories: List<Category>) {
         stream.emit(ServiceResult.Success(categories))
@@ -257,5 +347,9 @@ private class FakeCategoryManagementService : CategoryService {
     }
 
     override suspend fun getById(categoryId: Long): ServiceResult<Category> = error("unused")
-    override suspend fun reorder(categoryIds: List<Long>): ServiceResult<Unit> = error("unused")
+    override suspend fun reorder(categoryIds: List<Long>): ServiceResult<Unit> {
+        reordered += categoryIds
+        reorderGate?.await()
+        return reorderResult
+    }
 }

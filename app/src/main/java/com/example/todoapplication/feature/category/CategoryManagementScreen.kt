@@ -2,7 +2,6 @@ package com.example.todoapplication.feature.category
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,13 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -76,26 +72,25 @@ fun CategoryManagementScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            if (state.isLoading) {
+            if (state.isLoading || state.isReordering) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth().testTag(CATEGORY_LOADING_TAG),
                 )
             }
-            state.error?.let { CategoryErrorMessage(it) }
-            LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                items(state.categories, key = CategoryManagementItemUiModel::id) { category ->
-                    CategoryRow(
-                        category = category,
-                        enabled = !state.isSaving && !state.isDeleting,
-                        onEdit = { onEvent(CategoryManagementEvent.RequestEdit(category.id)) },
-                        onDelete = { onEvent(CategoryManagementEvent.RequestDelete(category.id)) },
-                    )
-                    HorizontalDivider()
-                }
+            if (state.editorMode == CategoryEditorMode.NONE) {
+                state.error?.let { CategoryErrorMessage(it) }
             }
+            ReorderableCategoryList(
+                categories = state.categories,
+                enabled = !state.isLoading && !state.isSaving && !state.isDeleting &&
+                    !state.isReordering && state.editorMode == CategoryEditorMode.NONE &&
+                    !state.showDeleteConfirmation,
+                onEvent = onEvent,
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+            )
             Button(
                 onClick = { onEvent(CategoryManagementEvent.RequestCreate) },
-                enabled = !state.isSaving && !state.isDeleting,
+                enabled = !state.isSaving && !state.isDeleting && !state.isReordering,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -113,15 +108,17 @@ fun CategoryManagementScreen(
 }
 
 @Composable
-private fun CategoryRow(
+internal fun CategoryRow(
     category: CategoryManagementItemUiModel,
     enabled: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+    dragHandle: @Composable () -> Unit = {},
 ) {
     val colorDescription = stringResource(R.string.category_color_indicator, category.name)
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -143,6 +140,7 @@ private fun CategoryRow(
             }
         }
         if (!category.isSystem) {
+            dragHandle()
             TextButton(
                 onClick = onEdit,
                 enabled = enabled,
@@ -177,18 +175,26 @@ private fun CategoryEditorDialog(
             )
         },
         text = {
-            OutlinedTextField(
-                value = state.categoryNameInput,
-                onValueChange = { onEvent(CategoryManagementEvent.CategoryNameChanged(it)) },
-                enabled = !state.isSaving,
-                singleLine = true,
-                label = { Text(stringResource(R.string.category_name_label)) },
-                supportingText = state.validationError?.let { error ->
-                    { Text(stringResource(error.stringResource)) }
-                },
-                isError = state.validationError != null,
-                modifier = Modifier.fillMaxWidth().testTag(CATEGORY_NAME_INPUT_TAG),
-            )
+            Column {
+                OutlinedTextField(
+                    value = state.categoryNameInput,
+                    onValueChange = { onEvent(CategoryManagementEvent.CategoryNameChanged(it)) },
+                    enabled = !state.isSaving,
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.category_name_label)) },
+                    supportingText = state.validationError?.let { error ->
+                        { Text(stringResource(error.stringResource)) }
+                    },
+                    isError = state.validationError != null,
+                    modifier = Modifier.fillMaxWidth().testTag(CATEGORY_NAME_INPUT_TAG),
+                )
+                CategoryColorPicker(
+                    selected = state.selectedCategoryColor,
+                    enabled = !state.isSaving,
+                    onSelected = { onEvent(CategoryManagementEvent.CategoryColorChanged(it)) },
+                )
+                state.error?.let { CategoryErrorMessage(it) }
+            }
         },
         confirmButton = {
             TextButton(
@@ -259,6 +265,7 @@ private val CategoryNameValidationError.stringResource: Int
 
 private val CategoryManagementError.stringResource: Int
     @StringRes get() = when (this) {
+        CategoryManagementError.INVALID_ORDER -> R.string.error_category_order
         CategoryManagementError.CATEGORY_NOT_FOUND -> R.string.error_manage_category_not_found
         CategoryManagementError.SYSTEM_OPERATION_PROHIBITED -> R.string.error_system_category_operation
         CategoryManagementError.PERSISTENCE_FAILURE -> R.string.error_category_persistence_failure

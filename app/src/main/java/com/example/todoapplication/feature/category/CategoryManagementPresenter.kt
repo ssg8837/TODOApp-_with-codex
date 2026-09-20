@@ -33,6 +33,12 @@ class CategoryManagementPresenter(
 
     fun onEvent(event: CategoryManagementEvent) {
         when (event) {
+            is CategoryManagementEvent.CategoryColorChanged -> {
+                if (!isBusy() && mutableState.value.editorMode != CategoryEditorMode.NONE) {
+                    mutableState.update { it.copy(selectedCategoryColor = event.color) }
+                }
+            }
+            is CategoryManagementEvent.ReorderCategories -> reorder(event.orderedIds)
             CategoryManagementEvent.RequestCreate -> requestCreate()
             is CategoryManagementEvent.RequestEdit -> requestEdit(event.categoryId)
             is CategoryManagementEvent.CategoryNameChanged -> nameChanged(event.value)
@@ -69,6 +75,7 @@ class CategoryManagementPresenter(
                 editorMode = CategoryEditorMode.CREATE,
                 editingCategoryId = null,
                 categoryNameInput = "",
+                selectedCategoryColor = CategoryColor.NEUTRAL,
                 validationError = null,
                 error = null,
             )
@@ -88,6 +95,7 @@ class CategoryManagementPresenter(
                     editorMode = CategoryEditorMode.EDIT,
                     editingCategoryId = category.id,
                     categoryNameInput = category.name,
+                    selectedCategoryColor = category.color,
                     validationError = null,
                     error = null,
                 )
@@ -112,7 +120,7 @@ class CategoryManagementPresenter(
             CategoryEditorMode.CREATE -> Category(
                 id = 0,
                 name = current.categoryNameInput,
-                color = CategoryColor.NEUTRAL,
+                color = current.selectedCategoryColor,
                 sortOrder = 1,
                 isSystem = false,
                 createdAt = Instant.now(clock),
@@ -120,7 +128,7 @@ class CategoryManagementPresenter(
             CategoryEditorMode.EDIT -> current.editingCategoryId
                 ?.let(categoriesById::get)
                 ?.takeUnless(Category::isSystem)
-                ?.copy(name = current.categoryNameInput)
+                ?.copy(name = current.categoryNameInput, color = current.selectedCategoryColor)
                 ?: run {
                     setError(CategoryManagementError.CATEGORY_NOT_FOUND)
                     return
@@ -222,7 +230,28 @@ class CategoryManagementPresenter(
         }
     }
 
-    private fun isBusy(): Boolean = mutableState.value.run { isSaving || isDeleting }
+    private fun reorder(orderedIds: List<Long>) {
+        val current = mutableState.value
+        if (isBusy() || current.isLoading || current.editorMode != CategoryEditorMode.NONE ||
+            current.showDeleteConfirmation
+        ) return
+        if (orderedIds.any { categoriesById[it]?.isSystem == true }) {
+            setError(CategoryManagementError.SYSTEM_OPERATION_PROHIBITED)
+            return
+        }
+        mutableState.update { it.copy(isReordering = true, error = null) }
+        viewModelScope.launch {
+            val result = categoryService.reorder(orderedIds.toList())
+            mutableState.update {
+                it.copy(
+                    isReordering = false,
+                    error = (result as? ServiceResult.Failure)?.error?.toPresentationError(),
+                )
+            }
+        }
+    }
+
+    private fun isBusy(): Boolean = mutableState.value.run { isSaving || isDeleting || isReordering }
 
     private fun setError(error: CategoryManagementError) {
         mutableState.update { it.copy(error = error) }
@@ -246,6 +275,7 @@ class CategoryManagementPresenter(
     }
 
     private fun ServiceError.toPresentationError(): CategoryManagementError = when (this) {
+        ServiceError.InvalidCategoryOrder -> CategoryManagementError.INVALID_ORDER
         ServiceError.CategoryNotFound -> CategoryManagementError.CATEGORY_NOT_FOUND
         ServiceError.SystemCategoryOperationProhibited ->
             CategoryManagementError.SYSTEM_OPERATION_PROHIBITED

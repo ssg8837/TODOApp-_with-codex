@@ -39,6 +39,16 @@ interface FeaturePresenter {
 - Alarm 예약 실패는 저장 성공과 구분되는 사용자 안내 상태로 표현한다.
 - Category 재정렬 이벤트는 Service에 전달한다. `일반` 이동 거부와 사용자 Category의 연속된 `sortOrder` 구성은 `CategoryService`의 비즈니스 규칙이다.
 
+### Phase 9 Category 관리
+
+- 실제 구현명은 `CategoryManagementPresenter/UiState/Event`다.
+- `selectedCategoryColor`는 생성 시 NEUTRAL, 수정 시 기존 색상으로 초기화한다.
+- `CategoryColorChanged`는 편집 입력만 변경하며 저장 이벤트에서 이름과 함께 Service에 전달한다.
+- `ReorderCategories(orderedIds)`에는 사용자 Category ID만 포함한다. Presenter는 시스템 ID 요청을 차단하고 나머지 최종 검증은 Service에 위임한다.
+- `isReordering` 동안 정렬 및 CRUD 중복 요청을 막는다. 확정 목록은 Service Flow만 갱신한다.
+- 드래그 중 순서는 View의 일시적인 제스처 미리보기이며 완료·취소·원본 갱신 시 폐기한다. 저장 실패 시에도 Flow의 확정 순서를 표시한다.
+- 길게 누른 핸들 드래그와 접근성 위/아래 이동은 동일한 재정렬 이벤트를 사용한다.
+
 ## Application Service 계약
 
 - `TodoService`: Todo 등록·수정·삭제·완료 변경·날짜별 조회, Todo Validator 적용과 향후 Reminder/Alarm 연계 조정

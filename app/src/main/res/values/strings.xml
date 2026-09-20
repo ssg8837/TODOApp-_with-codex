@@ -63,4 +63,17 @@
     <string name="error_manage_category_not_found">Category를 찾을 수 없습니다.</string>
     <string name="error_system_category_operation">시스템 Category ‘일반’은 수정하거나 삭제할 수 없습니다.</string>
     <string name="error_category_persistence_failure">Category를 불러오거나 변경하지 못했습니다.</string>
+    <string name="category_choose_color">색상: %1$s</string>
+    <string name="category_color_neutral">회색</string>
+    <string name="category_color_red">빨강</string>
+    <string name="category_color_orange">주황</string>
+    <string name="category_color_yellow">노랑</string>
+    <string name="category_color_green">초록</string>
+    <string name="category_color_blue">파랑</string>
+    <string name="category_color_purple">보라</string>
+    <string name="category_color_pink">분홍</string>
+    <string name="category_move_up">한 칸 위로 이동</string>
+    <string name="category_move_down">한 칸 아래로 이동</string>
+    <string name="category_drag">%1$s 순서 변경: 길게 누른 후 이동</string>
+    <string name="error_category_order">Category 순서를 저장하지 못했습니다. 목록을 확인한 후 다시 시도해주세요.</string>
 </resources>

@@ -688,7 +688,9 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 ### 구현 상세
 
 - `일반`은 `sortOrder 0`으로 최상단에 고정하고 drag handle을 표시하지 않는다.
-- 사용자 Category끼리만 이동시키고 `CategoryService`가 결과를 `1..N`으로 재계산해 Repository의 원자적 순서 저장 API를 호출한다.
+- 사용자 Category끼리만 이동시키고 `CategoryService`가 사용자 ID 전체 집합을 검증한다. Repository의 기존 원자적 API를 통해 DAO transaction이 `sortOrder = 1..N`으로 저장한다.
+- `CategoryManagementPresenter`는 `isReordering`으로 중복 요청을 차단하고 Service Flow를 확정 목록으로 유지한다.
+- View는 길게 누른 핸들 드래그 중에만 임시 순서를 표시하며 완료 시 한 번 저장하고 취소·저장 실패 시 확정 목록을 표시한다. 접근성 위/아래 이동도 같은 이벤트를 사용한다.
 - 작은 원형 버튼에서 8개 사전 정의 팔레트를 열어 색상을 선택한다.
 - 자유 RGB/HEX 입력은 제공하지 않고 같은 색상 중복 사용을 허용한다.
 - `NEUTRAL` 등 Domain enum을 UI의 구체적인 Material 색상으로 매핑한다.

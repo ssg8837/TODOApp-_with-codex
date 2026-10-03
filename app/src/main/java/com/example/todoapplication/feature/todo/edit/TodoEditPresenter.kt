@@ -22,6 +22,14 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * TODO 신규 등록과 수정 화면의 입력·저장·삭제 상태를 관리하는 Presenter.
+ *
+ * 신규 모드에서는 시스템 Category를 기본 선택하고, 수정 모드에서는 기존 TODO와 Reminder를
+ * 로드한다. 저장/삭제 중복 요청을 상태로 차단하며 성공 시 [TodoEditEffect]를 한 번 전달할
+ * 뿐 Navigation을 직접 수행하지 않는다. TODO·Reminder 저장 순서와 Alarm orchestration은
+ * [TodoService]에 위임하고 Repository나 Room에는 접근하지 않는다.
+ */
 class TodoEditPresenter(
     private val todoService: TodoService,
     private val categoryService: CategoryService,
@@ -57,6 +65,7 @@ class TodoEditPresenter(
         }
     }
 
+    /** 편집 입력과 저장·삭제 확인 이벤트를 상태 또는 Service 유스케이스로 변환한다. */
     fun onEvent(event: TodoEditEvent) {
         when (event) {
             is TodoEditEvent.SetOneDayReminder -> setReminder(Reminder.ONE_DAY_BEFORE, event.enabled)

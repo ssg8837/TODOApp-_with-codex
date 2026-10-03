@@ -20,6 +20,10 @@ import com.example.todoapplication.app.TodoApplication
 import com.example.todoapplication.presenterfactory.TodoEditPresenterFactory
 import java.time.LocalDate
 
+/**
+ * 편집 Presenter의 상태·one-shot Effect와 TODO 편집 Screen을 연결한다.
+ * Saved/Deleted 효과를 Navigation callback으로 전달하며 데이터 계층에는 접근하지 않는다.
+ */
 @Composable
 fun TodoEditRoute(
     mode: TodoEditMode,

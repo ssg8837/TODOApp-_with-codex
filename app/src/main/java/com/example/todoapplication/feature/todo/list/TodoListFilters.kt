@@ -34,6 +34,7 @@ const val CATEGORY_FILTER_OPTION_PREFIX = "category-filter-option-"
 const val ALL_COMPLETION_FILTER_TAG = "completion-filter-all"
 const val INCOMPLETE_FILTER_TAG = "completion-filter-incomplete"
 
+/** Category와 완료 상태 필터를 표시하고 선택을 목록 이벤트로 전달한다. */
 @Composable
 internal fun TodoListFilters(state: TodoListUiState, onEvent: (TodoListEvent) -> Unit) {
     var expanded by remember { mutableStateOf(false) }

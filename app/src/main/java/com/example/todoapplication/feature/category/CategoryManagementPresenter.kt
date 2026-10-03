@@ -16,6 +16,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * Category 관리 화면의 생성·수정·삭제·정렬 및 색상 선택 상태를 관리하는 Presenter.
+ *
+ * 시스템 `일반`의 편집과 이동을 UI 상태에서도 차단하고 최종 정책은 [CategoryService]에
+ * 위임한다. drag & drop은 UI preview일 뿐 Service 성공 후 방출되는 순서가 영속 상태이며,
+ * reorder 실패 시 해당 Flow 상태로 복구된다. Repository와 Room에는 직접 접근하지 않는다.
+ */
 class CategoryManagementPresenter(
     private val categoryService: CategoryService,
     private val clock: Clock = Clock.systemDefaultZone(),
@@ -31,6 +38,7 @@ class CategoryManagementPresenter(
         }
     }
 
+    /** 화면 이벤트를 편집 상태 변경 또는 Category Service 유스케이스로 전달한다. */
     fun onEvent(event: CategoryManagementEvent) {
         when (event) {
             is CategoryManagementEvent.CategoryColorChanged -> {

@@ -9,6 +9,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.todoapplication.app.TodoApplication
 import com.example.todoapplication.presenterfactory.TodoListPresenterFactory
 
+/**
+ * AppContainer의 Service로 목록 Presenter를 만들고 lifecycle-aware 상태를 Screen에 연결한다.
+ * 화면 Navigation은 callback으로 전달하며 Repository나 DAO를 직접 조회하지 않는다.
+ */
 @Composable
 fun TodoListRoute(
     onAddTodo: (java.time.LocalDate) -> Unit,

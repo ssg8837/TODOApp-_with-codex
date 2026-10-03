@@ -4,6 +4,7 @@ import com.example.todoapplication.data.local.RoomConverters
 import com.example.todoapplication.data.local.entity.TodoEntity
 import com.example.todoapplication.domain.model.Todo
 
+/** [TodoEntity]와 UI/Room에 독립적인 [Todo] 도메인 모델을 상호 변환한다. */
 object TodoMapper {
     private val converters = RoomConverters()
 

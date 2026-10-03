@@ -6,6 +6,12 @@ import com.example.todoapplication.domain.validation.CategoryValidator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
+/**
+ * Category Validator와 Repository 조회를 조합해 Category 유스케이스를 수행한다.
+ *
+ * 예약 이름·중복 이름·시스템 Category 보호와 전체 reorder 입력을 검증한다. 삭제 시 TODO
+ * 재지정과 실제 transaction 순서는 Repository 아래 영속 계층에 맡긴다.
+ */
 class DefaultCategoryService(
     private val categoryRepository: CategoryRepository,
 ) : CategoryService {

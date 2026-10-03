@@ -24,6 +24,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/**
+ * TODO 목록 화면의 날짜·Category·미완료 필터와 표시 상태를 관리하는 Presenter.
+ *
+ * 선택 조건은 [flatMapLatest]로 [TodoService] 관찰 Flow에 연결해 이전 조건의 늦은 결과가
+ * 최신 화면을 덮지 못하게 한다. TODO와 [CategoryService] Flow를 결합해 Category 이름과
+ * 색상을 포함한 UI 모델을 만들며, 선택 Category가 삭제되면 전체 필터로 복귀한다. 미완료
+ * 필터에서 완료 처리된 항목은 Service Flow 갱신으로 자연스럽게 사라진다.
+ * Repository, DAO, Room에는 직접 접근하지 않는다.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TodoListPresenter(
     private val todoService: TodoService,
@@ -61,6 +70,7 @@ class TodoListPresenter(
         }
     }
 
+    /** 사용자 이벤트를 선택 조건 변경 또는 TODO 완료 유스케이스로 전달한다. */
     fun onEvent(event: TodoListEvent) {
         val current = query.value
         when (event) {

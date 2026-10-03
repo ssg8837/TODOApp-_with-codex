@@ -12,6 +12,12 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
+/**
+ * TODO validation과 Category 유효성, Reminder 저장 및 Alarm 동기화를 조정한다.
+ *
+ * Repository를 통해 Domain 데이터를 다루며 Room transaction 내부 절차를 알지 않는다.
+ * Alarm 예약 실패는 저장을 rollback하지 않고 [TodoSaveResult]의 상태로 보고한다.
+ */
 class DefaultTodoService(
     private val todoRepository: TodoRepository,
     private val categoryRepository: CategoryRepository,

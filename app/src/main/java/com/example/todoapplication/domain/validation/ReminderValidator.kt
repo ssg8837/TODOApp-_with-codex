@@ -2,12 +2,14 @@ package com.example.todoapplication.domain.validation
 
 import com.example.todoapplication.domain.model.Reminder
 
+/** Reminder 도메인 검증 실패 사유. */
 enum class ReminderValidationError {
     INVALID_TODO_ID,
     TODO_ID_MISMATCH,
     UNSUPPORTED_MINUTES_BEFORE,
 }
 
+/** Reminder의 TODO 식별자와 지원 간격을 저장소 접근 없이 검증한다. */
 object ReminderValidator {
     fun validate(
         reminder: Reminder,

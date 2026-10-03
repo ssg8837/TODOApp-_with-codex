@@ -30,6 +30,7 @@ import com.example.todoapplication.R
 import com.example.todoapplication.domain.model.CategoryColor
 import com.example.todoapplication.ui.theme.toComposeColor
 
+/** 사전 정의 [CategoryColor] 팔레트를 원형 선택 버튼으로 표시한다. */
 @Composable
 internal fun CategoryColorPicker(
     selected: CategoryColor,

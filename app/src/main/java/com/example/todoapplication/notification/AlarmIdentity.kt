@@ -4,6 +4,7 @@ import android.net.Uri
 import com.example.todoapplication.domain.model.Reminder
 import java.security.MessageDigest
 
+/** TODO와 Reminder ID 조합으로 Alarm URI와 Notification ID의 안정적인 identity를 만든다. */
 object AlarmIdentity {
     fun uri(reminder: Reminder): Uri = Uri.Builder()
         .scheme(SCHEME)

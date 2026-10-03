@@ -9,6 +9,7 @@ import com.example.todoapplication.R
 import com.example.todoapplication.domain.model.Reminder
 import com.example.todoapplication.domain.model.Todo
 
+/** Reminder Notification과 TODO 수정 화면으로 이동하는 content PendingIntent를 구성한다. */
 object NotificationFactory {
     fun create(context: Context, todo: Todo, reminder: Reminder): android.app.Notification {
         val contentIntent = PendingIntent.getActivity(

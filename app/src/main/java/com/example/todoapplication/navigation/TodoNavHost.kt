@@ -13,6 +13,10 @@ import com.example.todoapplication.feature.todo.edit.TodoEditRoute
 import com.example.todoapplication.feature.todo.list.TodoListRoute
 import java.time.LocalDate
 
+/**
+ * 목록·Category 관리·TODO 신규/수정 destination을 구성한다.
+ * Notification 진입의 [initialTodoId]는 ID만 사용해 수정 화면으로 이동한다.
+ */
 @Composable
 fun TodoNavHost(
     navController: NavHostController,

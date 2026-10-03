@@ -6,6 +6,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 
+/** Domain 시간·색상 타입과 Room에 저장 가능한 원시 값 사이의 변환을 제공한다. */
 class RoomConverters {
     @TypeConverter
     fun localDateToEpochDay(value: LocalDate): Long = value.toEpochDay()

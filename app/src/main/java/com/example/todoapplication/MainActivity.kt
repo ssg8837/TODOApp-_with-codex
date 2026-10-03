@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.example.todoapplication.app.TodoApp
 import com.example.todoapplication.ui.theme.ToDOApplicationTheme
 
+/** Compose 앱을 호스팅하고 Notification Intent의 TODO ID를 시작 navigation에 전달한다. */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

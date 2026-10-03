@@ -45,6 +45,10 @@ const val SAVE_CATEGORY_TAG = "save-category"
 const val DELETE_CATEGORY_DIALOG_TAG = "delete-category-dialog"
 const val CONFIRM_DELETE_CATEGORY_TAG = "confirm-delete-category"
 
+/**
+ * Category 관리 상태와 callback만 받아 목록·editor·삭제 확인을 렌더링하는 stateless Screen.
+ * 시스템 Category 보호와 최종 검증은 Presenter 및 Service에 위임한다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryManagementScreen(

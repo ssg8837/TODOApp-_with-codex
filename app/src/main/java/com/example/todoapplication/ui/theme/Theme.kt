@@ -33,6 +33,7 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+/** 시스템 테마와 지원 기기의 dynamic color를 적용하는 앱 Material theme. */
 @Composable
 fun ToDOApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),

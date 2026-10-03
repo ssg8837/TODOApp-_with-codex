@@ -932,6 +932,39 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - CRUD, 필터 및 Category 정책 변경
 - 새로운 권한 추가
 
+## Phase 12.5: 전체 KDoc / 헤더 코멘트 정리
+
+### 목적
+
+Phase 12까지 확정된 동작을 변경하지 않고 Kotlin 코드의 계층 책임, 주요 계약, transaction,
+Flow 및 Android 시스템 연동 제약을 KDoc과 필요한 주석으로 문서화한다.
+
+### 구현 대상
+
+- Domain model, Entity, Mapper, DAO와 Repository
+- Application Service와 Presenter 계약
+- 주요 Compose Route/Screen, Navigation과 Presenter Factory
+- AlarmScheduler, ReminderCalculator, BroadcastReceiver와 Notification 구성요소
+- AppContainer, Application과 Activity의 의존성 경계
+
+### 의존하는 이전 Phase
+
+- Phase 0~12 전체
+
+### 완료 조건
+
+- 주요 클래스와 public 계약의 책임 및 책임 밖 영역이 실제 구현과 일치한다.
+- Category 삭제·정렬과 Reminder 교체 transaction의 원자적 범위가 명시되어 있다.
+- Flow 최신성, Alarm fallback, Receiver lifecycle과 재부팅 복구 정책이 문서화되어 있다.
+- production 실행 코드는 변경되지 않고 전체 JVM/Android 회귀 테스트와 빌드가 통과한다.
+
+### 해당 Phase에서 수정하면 안 되는 범위
+
+- 함수 시그니처, visibility, 실행 순서와 비즈니스 로직
+- Room query/schema와 transaction 구현
+- DI, Flow/Coroutine, Alarm/Notification 동작
+- Phase 13 통합 검증 및 요구사항에 없는 기능
+
 ## Phase 13: 통합 테스트 및 MVP 완료 검증
 
 ### 목적

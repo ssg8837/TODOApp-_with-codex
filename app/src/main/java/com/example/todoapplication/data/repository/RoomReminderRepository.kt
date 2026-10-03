@@ -10,6 +10,12 @@ import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * [ReminderRepository]의 Room 구현.
+ *
+ * Domain Reminder를 Entity로 변환해 DAO에 위임하며, 교체는 단일 transaction API를 한 번
+ * 호출한다. AlarmManager 예약이나 Reminder 비즈니스 검증은 수행하지 않는다.
+ */
 internal class RoomReminderRepository(
     private val reminderDao: ReminderDao,
 ) : ReminderRepository {

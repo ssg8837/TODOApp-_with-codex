@@ -7,6 +7,7 @@ import com.example.todoapplication.application.service.TodoService
 import com.example.todoapplication.feature.todo.list.TodoListPresenter
 import java.time.Clock
 
+/** AppContainer의 TODO·Category Service와 Clock으로 목록 Presenter를 생성하는 수동 DI 경계. */
 class TodoListPresenterFactory(
     private val todoService: TodoService,
     private val categoryService: CategoryService,

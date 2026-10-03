@@ -8,6 +8,11 @@ import androidx.room.Update
 import com.example.todoapplication.data.local.entity.TodoEntity
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * TODO 테이블의 저장·조회 계약을 정의하는 Room DAO.
+ *
+ * 날짜별 Flow는 시간 있는 TODO 우선, 시간 및 생성 시각 오름차순으로 갱신을 방출한다.
+ */
 @Dao
 interface TodoDao {
     @Insert
@@ -35,6 +40,7 @@ interface TodoDao {
     )
     fun observeByDate(dateEpochDay: Long): Flow<List<TodoEntity>>
 
+    /** 날짜와 선택 Category, 미완료 여부를 함께 적용한 최신 목록을 관찰한다. */
     @Query(
         """
         SELECT * FROM todos

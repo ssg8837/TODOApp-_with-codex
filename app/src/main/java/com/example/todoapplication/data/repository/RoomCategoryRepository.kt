@@ -7,6 +7,12 @@ import com.example.todoapplication.domain.repository.CategoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * [CategoryRepository]의 Room 구현.
+ *
+ * Entity↔Domain 변환과 DAO 호출을 담당한다. 삭제 재지정과 reorder의 transaction 절차는
+ * 직접 재구현하지 않고 [CategoryDao]의 원자적 API에 위임한다.
+ */
 internal class RoomCategoryRepository(
     private val categoryDao: CategoryDao,
 ) : CategoryRepository {

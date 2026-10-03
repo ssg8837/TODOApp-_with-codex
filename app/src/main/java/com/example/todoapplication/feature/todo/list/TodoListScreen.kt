@@ -60,6 +60,10 @@ const val ADD_TODO_TAG = "add-todo"
 const val MANAGE_CATEGORIES_TAG = "manage-categories"
 const val TODO_ITEM_TAG_PREFIX = "todo-item-"
 
+/**
+ * [TodoListUiState]와 callback만으로 목록을 렌더링하는 stateless Screen.
+ * Service나 Repository에 접근하지 않고 모든 사용자 의도를 [TodoListEvent]로 전달한다.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoListScreen(

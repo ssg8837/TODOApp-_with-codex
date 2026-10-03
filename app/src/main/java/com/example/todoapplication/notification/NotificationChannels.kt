@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import com.example.todoapplication.R
 
+/** TODO Reminder Notification이 사용하는 Android notification channel을 생성한다. */
 object NotificationChannels {
     const val TODO_REMINDERS = "todo_reminders"
 

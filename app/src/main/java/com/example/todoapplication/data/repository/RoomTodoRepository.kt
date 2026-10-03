@@ -8,7 +8,13 @@ import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-
+/**
+ * [TodoRepository]의 Room 구현.
+ *
+ * DAO의 Entity를 [TodoMapper]로 Domain 모델에 변환하고 Room/SQLite 오류를
+ * [com.example.todoapplication.domain.repository.DataAccessException]으로 경계화한다.
+ * Android UI와 비즈니스 검증에는 의존하지 않는다.
+ */
 internal class RoomTodoRepository(
     private val todoDao: TodoDao,
 ) : TodoRepository {

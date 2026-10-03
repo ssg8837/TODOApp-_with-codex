@@ -3,6 +3,7 @@ package com.example.todoapplication.ui.theme
 import androidx.compose.ui.graphics.Color
 import com.example.todoapplication.domain.model.CategoryColor
 
+/** Domain의 의미 색상을 Compose 렌더링 색상으로 변환하는 UI 경계. */
 fun CategoryColor.toComposeColor(): Color = when (this) {
     CategoryColor.NEUTRAL -> Color(0xFF616161)
     CategoryColor.RED -> Color(0xFFC62828)

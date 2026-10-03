@@ -4,6 +4,7 @@ import com.example.todoapplication.data.local.RoomConverters
 import com.example.todoapplication.data.local.entity.CategoryEntity
 import com.example.todoapplication.domain.model.Category
 
+/** [CategoryEntity]와 [Category] 사이에서 색상·timestamp 저장 표현까지 변환한다. */
 object CategoryMapper {
     private val converters = RoomConverters()
 

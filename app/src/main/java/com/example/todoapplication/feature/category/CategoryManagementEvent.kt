@@ -2,6 +2,7 @@ package com.example.todoapplication.feature.category
 
 import com.example.todoapplication.domain.model.CategoryColor
 
+/** Category 관리 화면에서 Presenter가 처리하는 사용자 의도. */
 sealed interface CategoryManagementEvent {
     data class CategoryColorChanged(val color: CategoryColor) : CategoryManagementEvent
     data class ReorderCategories(val orderedIds: List<Long>) : CategoryManagementEvent

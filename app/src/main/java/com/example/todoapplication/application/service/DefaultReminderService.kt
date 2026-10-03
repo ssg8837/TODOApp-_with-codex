@@ -8,6 +8,12 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * Reminder Validator와 TODO 상태를 조합해 Reminder 유스케이스를 수행한다.
+ *
+ * 시간이 없는 TODO의 Reminder를 거부한다. 목록 교체는 검증 후 Repository API를 한 번만
+ * 호출하므로 삭제·일괄 삽입의 transaction 순서를 Service에서 재구현하지 않는다.
+ */
 class DefaultReminderService(
     private val reminderRepository: ReminderRepository,
     private val todoRepository: TodoRepository,

@@ -2,6 +2,7 @@ package com.example.todoapplication.domain.validation
 
 import com.example.todoapplication.domain.model.Category
 
+/** Category 도메인 검증 실패 사유. */
 enum class CategoryValidationError {
     BLANK_NAME,
     DUPLICATE_NAME,
@@ -12,6 +13,7 @@ enum class CategoryValidationError {
     INVALID_USER_SORT_ORDER,
 }
 
+/** 시스템 `일반` 정책과 사용자 Category 이름·순서 불변식을 검증한다. */
 object CategoryValidator {
     fun validate(
         category: Category,

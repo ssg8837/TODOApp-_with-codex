@@ -14,6 +14,12 @@ import com.example.todoapplication.data.local.entity.ReminderEntity
 import com.example.todoapplication.data.local.entity.TodoEntity
 import com.example.todoapplication.domain.model.Category
 
+/**
+ * TODO, Category, Reminder를 보관하는 version 1 Room database.
+ *
+ * 최초 생성 callback에서 시스템 Category `일반`을 중복 없이 seed한다. DAO와 schema만
+ * 노출하며 destructive migration 정책은 사용하지 않는다.
+ */
 @Database(
     entities = [TodoEntity::class, CategoryEntity::class, ReminderEntity::class],
     version = 1,
@@ -30,6 +36,7 @@ abstract class TodoDatabase : RoomDatabase() {
     companion object {
         const val DATABASE_NAME = "todo.db"
 
+        /** 시스템 Category 생성 callback을 포함한 영속 database를 만든다. */
         fun create(context: Context, name: String = DATABASE_NAME): TodoDatabase =
             Room.databaseBuilder(context, TodoDatabase::class.java, name)
                 .addCallback(systemCategoryCallback)

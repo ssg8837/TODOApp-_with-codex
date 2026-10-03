@@ -6,6 +6,7 @@ import com.example.todoapplication.application.service.CategoryService
 import com.example.todoapplication.feature.category.CategoryManagementPresenter
 import java.time.Clock
 
+/** Category Service와 테스트 가능한 Clock으로 Category 관리 Presenter를 생성한다. */
 class CategoryManagementPresenterFactory(
     private val categoryService: CategoryService,
     private val clock: Clock = Clock.systemDefaultZone(),

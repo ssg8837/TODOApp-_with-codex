@@ -14,6 +14,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * Reminder Alarm을 받아 최신 DB 상태를 재조회한 뒤 유효한 경우에만 Notification을 표시한다.
+ *
+ * Intent의 ID와 예정 시각만으로 알림을 결정하지 않으며 삭제·완료·변경된 Reminder를 제외한다.
+ * 알림 권한이 없으면 안전하게 종료한다. DB 조회는 [goAsync] 이후 IO coroutine에서 수행하고
+ * 모든 coroutine 종료 경로에서 `PendingResult.finish()`를 호출한다.
+ */
 class TodoAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != AndroidAlarmScheduler.ACTION_REMINDER) return

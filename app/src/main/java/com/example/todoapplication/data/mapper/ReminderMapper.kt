@@ -3,6 +3,7 @@ package com.example.todoapplication.data.mapper
 import com.example.todoapplication.data.local.entity.ReminderEntity
 import com.example.todoapplication.domain.model.Reminder
 
+/** Room의 [ReminderEntity]와 Domain [Reminder]를 상호 변환한다. */
 object ReminderMapper {
     fun toDomain(entity: ReminderEntity): Reminder = Reminder(
         id = entity.id,

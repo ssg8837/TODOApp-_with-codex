@@ -19,6 +19,10 @@ import com.example.todoapplication.domain.repository.TodoRepository
 import com.example.todoapplication.notification.AlarmScheduler
 import com.example.todoapplication.notification.AndroidAlarmScheduler
 
+/**
+ * Application 범위에서 Room DAO→Repository→Service와 [AlarmScheduler]를 constructor 방식으로
+ * 조립하는 [AppContainer] 구현. Hilt/Koin 없이 Android 구현체와 Application 계층을 연결한다.
+ */
 class DefaultAppContainer(
     context: Context,
 ) : AppContainer {

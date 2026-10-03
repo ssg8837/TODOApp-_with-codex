@@ -9,6 +9,7 @@ import com.example.todoapplication.feature.todo.edit.TodoEditPresenter
 import java.time.Clock
 import java.time.LocalDate
 
+/** Service와 route 인수를 주입해 신규/수정 모드의 TODO 편집 Presenter를 생성한다. */
 class TodoEditPresenterFactory(
     private val todoService: TodoService,
     private val categoryService: CategoryService,

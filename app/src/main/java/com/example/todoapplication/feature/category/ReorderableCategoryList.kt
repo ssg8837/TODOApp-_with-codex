@@ -32,6 +32,10 @@ import androidx.compose.ui.unit.dp
 import com.example.todoapplication.R
 import kotlinx.coroutines.delay
 
+/**
+ * 시스템 Category를 고정한 채 사용자 Category의 drag preview를 제공한다.
+ * 실제 순서는 drag 종료 시 이벤트로 한 번 요청하며 Service Flow가 최종 영속 상태다.
+ */
 @Composable
 internal fun ReorderableCategoryList(
     categories: List<CategoryManagementItemUiModel>,

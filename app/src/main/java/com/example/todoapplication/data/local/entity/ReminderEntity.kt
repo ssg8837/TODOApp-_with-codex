@@ -6,6 +6,11 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+/**
+ * TODO에 연결된 Reminder를 저장하는 Room Entity.
+ *
+ * TODO 삭제 시 FK cascade로 함께 삭제되며, 알림 간격은 TODO 시각 이전의 분 단위 값이다.
+ */
 @Entity(
     tableName = "reminders",
     foreignKeys = [

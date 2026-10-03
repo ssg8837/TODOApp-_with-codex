@@ -69,6 +69,10 @@ const val CONFIRM_DELETE_TAG = "confirm-delete"
 const val ONE_DAY_REMINDER_TAG = "reminder-one-day"
 const val FIFTEEN_MINUTE_REMINDER_TAG = "reminder-fifteen-minutes"
 
+/**
+ * [TodoEditUiState]를 렌더링하고 입력 callback만 방출하는 stateless 편집 Screen.
+ * 알림 권한은 사용자가 처음 Reminder를 활성화할 때 Route에 요청하도록 callback을 전달한다.
+ */
 @Composable
 fun TodoEditScreen(
     state: TodoEditUiState,

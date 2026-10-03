@@ -6,6 +6,12 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+/**
+ * TODO를 `todos` 테이블에 저장하는 Room Entity.
+ *
+ * 날짜는 epoch day, 선택적 시간은 자정 이후 분, timestamp는 epoch milliseconds로 저장한다.
+ * Category FK는 non-null이며 Category 삭제가 TODO를 cascade 삭제하지 않는다.
+ */
 @Entity(
     tableName = "todos",
     foreignKeys = [

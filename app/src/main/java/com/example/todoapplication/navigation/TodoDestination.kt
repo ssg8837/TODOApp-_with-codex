@@ -2,6 +2,10 @@ package com.example.todoapplication.navigation
 
 import java.time.LocalDate
 
+/**
+ * 앱의 route와 최소 navigation argument 계약.
+ * 신규 화면에는 날짜, 수정 화면에는 TODO ID만 전달하며 Domain 객체는 전달하지 않는다.
+ */
 object TodoDestination {
     const val LIST = "todo/list"
     const val CATEGORY_MANAGEMENT = "category/manage"

@@ -3,6 +3,7 @@ package com.example.todoapplication.feature.todo.edit
 import java.time.LocalDate
 import java.time.LocalTime
 
+/** TODO 편집 화면에서 Presenter가 처리하는 사용자 의도. */
 sealed interface TodoEditEvent {
     data class SetOneDayReminder(val enabled: Boolean) : TodoEditEvent
 
@@ -28,6 +29,7 @@ sealed interface TodoEditEvent {
     data object CancelDelete : TodoEditEvent
 }
 
+/** 저장·삭제 성공 후 Route가 Navigation에 사용하는 one-shot 효과. */
 sealed interface TodoEditEffect {
     data object Saved : TodoEditEffect
 

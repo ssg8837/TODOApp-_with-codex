@@ -7,6 +7,7 @@ import androidx.room.Transaction
 import com.example.todoapplication.data.local.entity.ReminderEntity
 import kotlinx.coroutines.flow.Flow
 
+/** TODO별 Reminder 영속 상태와 재부팅 복구 후보 조회를 담당하는 Room DAO. */
 @Dao
 abstract class ReminderDao {
     @Insert
@@ -27,6 +28,12 @@ abstract class ReminderDao {
     @Query("DELETE FROM reminders WHERE todo_id = :todoId")
     abstract suspend fun deleteByTodoId(todoId: Long): Int
 
+    /**
+     * [todoId]의 기존 Reminder를 모두 삭제하고 [reminders]를 일괄 삽입한다.
+     *
+     * 삭제와 삽입은 하나의 transaction으로 실행된다. 삽입 하나라도 실패하면 삭제를 포함한
+     * 변경 전체가 rollback되며 빈 목록은 기존 Reminder 삭제만 commit한다.
+     */
     @Transaction
     open suspend fun replaceByTodoId(
         todoId: Long,
@@ -36,6 +43,10 @@ abstract class ReminderDao {
         return insertAll(reminders)
     }
 
+    /**
+     * 미완료이며 시간이 있는 TODO 중 DB 계산 기준으로 현재보다 미래인 복구 후보를 조회한다.
+     * Application Service는 예약 직전에 최신 상태와 정확한 발화 시각을 다시 검증한다.
+     */
     @Query(
         """
         SELECT reminders.* FROM reminders

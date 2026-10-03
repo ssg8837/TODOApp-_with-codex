@@ -56,6 +56,8 @@
 - Exact 사용 가능 시 Exact, 불가 시 Inexact fallback
 - 알림 권한 없음과 예약 실패 시 저장 유지 및 안내
 - 재부팅 시 미래 Reminder만 복구
+- 부팅 복구는 최신 Reminder/Todo 재검증, 완료·삭제·시간 없음·현재 이하 발화 시각 제외, 일부 실패 격리와 반복 복구 identity 안정성을 검증한다.
+- Receiver 테스트는 `BOOT_COMPLETED` 계약, Manifest 권한/선언과 비동기 작업의 완료 경로를 검증한다.
 - Service 테스트에서는 Fake Repository와 Fake AlarmScheduler로 저장·예약 순서 및 부분 실패 정책을 검증한다.
 
 ## 완료 기준

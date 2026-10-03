@@ -6,6 +6,8 @@ import com.example.todoapplication.application.service.DefaultCategoryService
 import com.example.todoapplication.application.service.DefaultReminderService
 import com.example.todoapplication.application.service.DefaultTodoService
 import com.example.todoapplication.application.service.ReminderService
+import com.example.todoapplication.application.service.ReminderRecoveryService
+import com.example.todoapplication.application.service.DefaultReminderRecoveryService
 import com.example.todoapplication.application.service.TodoService
 import com.example.todoapplication.data.local.TodoDatabase
 import com.example.todoapplication.data.repository.RoomCategoryRepository
@@ -45,4 +47,11 @@ class DefaultAppContainer(
         reminderRepository = reminderRepository,
         todoRepository = todoRepository,
     )
+
+    override val reminderRecoveryService: ReminderRecoveryService =
+        DefaultReminderRecoveryService(
+            reminderService = reminderService,
+            todoService = todoService,
+            alarmScheduler = alarmScheduler,
+        )
 }

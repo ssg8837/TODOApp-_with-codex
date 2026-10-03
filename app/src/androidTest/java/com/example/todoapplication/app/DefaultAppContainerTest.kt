@@ -39,6 +39,7 @@ class DefaultAppContainerTest {
         assertNotNull(container.todoService)
         assertNotNull(container.categoryService)
         assertNotNull(container.reminderService)
+        assertNotNull(container.reminderRecoveryService)
         assertNotNull(container.categoryRepository.getSystemCategory())
     }
 }

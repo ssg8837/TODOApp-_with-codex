@@ -71,3 +71,10 @@ Receiver는 Intent의 Reminder ID와 예약 시각을 키로 사용하되, 알�
 ## 재부팅
 
 `BOOT_COMPLETED` 수신 후 Room을 조회하여 현재보다 미래이고 미완료 TODO에 속한 Reminder만 다시 등록한다. 동일한 Alarm ID 규칙을 사용해 중복을 방지한다. 필요한 Manifest 권한과 Receiver만 선언한다.
+
+- `BootReceiver`는 `goAsync()`로 수신 수명을 연장하고 `ReminderRecoveryService` 호출만 담당한다. DAO, Repository, AlarmManager와 복구 판정 로직에 직접 접근하지 않는다.
+- `ReminderRecoveryService`는 Room 기반 후보마다 최신 Reminder와 Todo를 다시 조회하고, 삭제·변경·완료·시간 없음·현재 시각 이하 발화 시각을 제외한다.
+- 발화 시각은 Phase 11의 `ReminderCalculator`와 주입된 `Clock`/`ZoneId`를 재사용한다.
+- 유효 Reminder는 기존 `AlarmScheduler.schedule()`로 재예약하므로 PendingIntent identity와 Exact→Inexact fallback 정책이 동일하다.
+- 후보 하나의 조회 또는 예약 실패는 다른 후보의 복구를 중단하지 않는다. 결과는 전체 성공, 일부 실패, 전체 실패와 건수로 구분하되 부팅 시 UI를 표시하지 않는다.
+- 복구 트리거는 `BOOT_COMPLETED`만 사용하며 앱 시작, 시간대·시각 변경, 앱 업데이트에는 전체 DB 스캔을 추가하지 않는다.

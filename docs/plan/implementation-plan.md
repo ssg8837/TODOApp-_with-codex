@@ -887,11 +887,12 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 ### 생성 또는 수정할 예상 파일
 
 - `app/src/main/java/com/example/todoapplication/notification/BootReceiver.kt`
-- `app/src/main/java/com/example/todoapplication/notification/ReminderRescheduler.kt`
+- `app/src/main/java/com/example/todoapplication/application/service/ReminderRecoveryService.kt`
 - `app/src/main/java/com/example/todoapplication/app/DefaultAppContainer.kt`
 - `app/src/main/AndroidManifest.xml`
-- `app/src/test/java/com/example/todoapplication/notification/ReminderReschedulerTest.kt`
-- `app/src/androidTest/java/com/example/todoapplication/notification/BootReceiverTest.kt`
+- `app/src/test/java/com/example/todoapplication/application/service/ReminderRecoveryServiceTest.kt`
+- `app/src/test/java/com/example/todoapplication/notification/BootReceiverTest.kt`
+- `app/src/androidTest/java/com/example/todoapplication/notification/ReminderRecoveryIntegrationTest.kt`
 
 ### 의존하는 이전 Phase
 
@@ -905,6 +906,9 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - Phase 11과 같은 Alarm ID 및 Exact/Inexact fallback을 재사용한다.
 - 한 Alarm 실패가 나머지 복구를 중단하지 않도록 처리한다.
 - 필요한 최소 Manifest 권한과 exported 설정만 선언한다.
+- `BootReceiver`는 `goAsync()`와 반드시 실행되는 `finish()`로 수명을 관리하고 AppContainer의 `ReminderRecoveryService`만 호출한다.
+- 복구 Service는 조회 후보의 최신 Reminder/Todo를 재검증하고 Phase 11의 `ReminderCalculator`, Clock/ZoneId와 AlarmScheduler를 재사용한다.
+- 복구 결과는 성공·일부 실패·실패 및 예약/제외/실패 건수로 구분하며 별도 UI는 표시하지 않는다.
 
 ### 테스트 항목
 

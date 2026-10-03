@@ -20,6 +20,12 @@ class DefaultReminderService(
     override fun observeByTodoId(todoId: Long): Flow<ServiceResult<List<Reminder>>> =
         reminderRepository.observeByTodoId(todoId).asServiceResult()
 
+    override suspend fun getById(reminderId: Long): ServiceResult<Reminder> = serviceCall {
+        val reminder = reminderRepository.getById(reminderId)
+            ?: return@serviceCall ServiceResult.Failure(ServiceError.ReminderNotFound)
+        ServiceResult.Success(reminder)
+    }
+
     override suspend fun replaceReminders(
         todoId: Long,
         reminders: List<Reminder>,

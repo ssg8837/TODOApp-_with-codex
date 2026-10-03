@@ -24,6 +24,9 @@ Todo/Reminder 저장
 - 각 Alarm은 Todo와 Reminder를 함께 식별하는 안정적인 ID를 가진다.
 - 날짜, 시간 또는 Reminder 변경 시 기존 Alarm을 취소하고 등록 가능한 Alarm을 다시 계산한다.
 - TODO 삭제 시 미래 Alarm을 취소하고 Reminder도 삭제한다.
+- TODO 편집 저장은 Todo 영속화 후 실제 Todo ID로 `ReminderRepository.replaceReminders()`를 호출한다. Reminder의 삭제·일괄 삽입은 하나의 Room transaction이지만 현재 Repository 경계상 Todo 변경과 Reminder 교체는 서로 다른 transaction이다.
+- DB 저장 뒤 Alarm 동기화가 실패해도 DB를 롤백하지 않으며 `TodoService.resynchronizeAlarms(todoId)`로 저장 상태를 다시 적용할 수 있다.
+- 예약 PendingIntent는 고정 request code와 `todo-reminder://alarm/{todoId}/{reminderId}` data URI 조합으로 식별한다. `Long` ID를 request code로 축소하지 않는다.
 
 ## 과거 Reminder
 
@@ -44,6 +47,7 @@ Todo/Reminder 저장
 - Exact Alarm 사용 가능 여부를 확인하고 가능하면 Exact Alarm을 사용한다.
 - Exact Alarm 권한 또는 특수 접근이 없으면 Android가 허용하는 Inexact Alarm으로 fallback한다.
 - 시스템 정책이나 권한을 우회하지 않는다.
+- Exact API 호출 직전에 권한이 바뀌어 `SecurityException`이 발생하면 Inexact 방식으로 재시도한다.
 
 ## 알림 표시 권한
 
@@ -61,6 +65,8 @@ Todo/Reminder 저장
 ## Notification Channel
 
 앱의 알림 기능 초기화 시 TODO 알림용 Notification Channel 하나를 생성한다.
+
+Receiver는 Intent의 Reminder ID와 예약 시각을 키로 사용하되, 알림 표시 직전에 Room을 다시 조회한다. Todo/Reminder 삭제, 완료, 예정 시각 변경이 확인되면 늦게 도착한 broadcast를 무시한다. 알림 선택 시 Todo ID만 전달하여 수정 화면에서 최신 데이터를 다시 읽는다.
 
 ## 재부팅
 

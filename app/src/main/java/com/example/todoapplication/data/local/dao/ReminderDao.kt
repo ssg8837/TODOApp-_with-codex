@@ -18,6 +18,9 @@ abstract class ReminderDao {
     @Query("SELECT * FROM reminders WHERE todo_id = :todoId ORDER BY minutes_before ASC, id ASC")
     abstract fun observeByTodoId(todoId: Long): Flow<List<ReminderEntity>>
 
+    @Query("SELECT * FROM reminders WHERE id = :id")
+    abstract suspend fun getById(id: Long): ReminderEntity?
+
     @Query("DELETE FROM reminders WHERE id = :id")
     abstract suspend fun deleteById(id: Long): Int
 

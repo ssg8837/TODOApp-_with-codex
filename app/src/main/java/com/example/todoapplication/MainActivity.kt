@@ -13,9 +13,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ToDOApplicationTheme {
-                TodoApp()
+                TodoApp(initialTodoId = intent.getLongExtra(EXTRA_TODO_ID, 0L).takeIf { it > 0L })
             }
         }
     }
+
+    companion object {
+        const val EXTRA_TODO_ID = "todo_id"
+    }
 }
-    

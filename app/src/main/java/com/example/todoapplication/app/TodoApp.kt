@@ -5,7 +5,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.todoapplication.navigation.TodoNavHost
 
 @Composable
-fun TodoApp() {
+fun TodoApp(initialTodoId: Long? = null) {
     val navController = rememberNavController()
-    TodoNavHost(navController = navController)
+    TodoNavHost(navController = navController, initialTodoId = initialTodoId)
 }

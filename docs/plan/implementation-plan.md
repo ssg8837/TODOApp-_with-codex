@@ -842,6 +842,8 @@ Category의 사용자 지정 순서와 사전 정의 색상 UI를 완성하고 �
 - TODO 삭제 시 Reminder와 미래 Alarm을 제거한다.
 - 완료 시 Reminder는 유지하고 미래 Alarm만 취소하며, 미완료 복귀 시 미래 Reminder만 재등록한다.
 - AlarmScheduler는 Repository 내부에 숨기지 않고 TodoService 또는 ReminderService에 별도 abstraction으로 주입한다.
+- 실제 구현에서는 Todo 저장과 Reminder 교체의 Repository transaction 경계가 분리되어 있다. Reminder 교체 자체는 기존 단일 Room transaction을 유지하며, Alarm 동기화 실패는 저장 결과와 분리하고 `resynchronizeAlarms(todoId)` 재시도 경계를 제공한다.
+- Receiver는 최신 Todo/Reminder와 예약 시각을 DB에서 재검증하고, 알림 클릭은 해당 Todo 수정 route로 연결한다.
 
 ### 테스트 항목
 

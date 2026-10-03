@@ -18,6 +18,9 @@ data class TodoEditUiState(
     val isDeleting: Boolean = false,
     val validationErrors: Set<TodoEditValidationError> = emptySet(),
     val error: TodoEditError? = null,
+    val remindOneDayBefore: Boolean = false,
+    val remindFifteenMinutesBefore: Boolean = false,
+    val notificationPermissionDenied: Boolean = false,
 )
 
 enum class TodoEditMode {
@@ -42,4 +45,7 @@ enum class TodoEditError {
     INVALID_TODO,
     PERSISTENCE_FAILURE,
     OPERATION_FAILED,
+    ALARM_NOT_SCHEDULED,
+    NOTIFICATION_PERMISSION_DENIED,
+    INEXACT_ALARM_SCHEDULED,
 }

@@ -1,6 +1,7 @@
 package com.example.todoapplication.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -13,7 +14,10 @@ import com.example.todoapplication.feature.todo.list.TodoListRoute
 import java.time.LocalDate
 
 @Composable
-fun TodoNavHost(navController: NavHostController) {
+fun TodoNavHost(
+    navController: NavHostController,
+    initialTodoId: Long? = null,
+) {
     NavHost(
         navController = navController,
         startDestination = TodoDestination.LIST,
@@ -62,6 +66,11 @@ fun TodoNavHost(navController: NavHostController) {
                 onSaved = navController::popBackStack,
                 onDeleted = navController::popBackStack,
             )
+        }
+    }
+    LaunchedEffect(initialTodoId) {
+        initialTodoId?.takeIf { it > 0L }?.let { todoId ->
+            navController.navigate(TodoDestination.editTodo(todoId))
         }
     }
 }

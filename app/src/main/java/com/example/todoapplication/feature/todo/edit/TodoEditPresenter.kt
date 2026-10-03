@@ -8,6 +8,7 @@ import com.example.todoapplication.application.service.ServiceResult
 import com.example.todoapplication.application.service.TodoService
 import com.example.todoapplication.domain.model.Category
 import com.example.todoapplication.domain.model.Todo
+import com.example.todoapplication.domain.model.Reminder
 import com.example.todoapplication.domain.validation.TodoValidationError
 import java.time.Clock
 import java.time.Instant
@@ -39,6 +40,7 @@ class TodoEditPresenter(
     private val effectChannel = Channel<TodoEditEffect>(Channel.BUFFERED)
     private var categoriesLoaded = false
     private var todoLoaded = mode == TodoEditMode.CREATE
+    private var remindersLoaded = mode == TodoEditMode.CREATE
     private var originalTodo: Todo? = null
 
     val state: StateFlow<TodoEditUiState> = mutableState.asStateFlow()
@@ -57,6 +59,12 @@ class TodoEditPresenter(
 
     fun onEvent(event: TodoEditEvent) {
         when (event) {
+            is TodoEditEvent.SetOneDayReminder -> setReminder(Reminder.ONE_DAY_BEFORE, event.enabled)
+            is TodoEditEvent.SetFifteenMinuteReminder ->
+                setReminder(Reminder.FIFTEEN_MINUTES_BEFORE, event.enabled)
+            is TodoEditEvent.NotificationPermissionResult -> mutableState.update {
+                it.copy(notificationPermissionDenied = !event.granted)
+            }
             is TodoEditEvent.TitleChanged -> mutableState.update {
                 it.copy(
                     title = event.title,
@@ -66,7 +74,13 @@ class TodoEditPresenter(
             }
             is TodoEditEvent.DateChanged -> mutableState.update { it.copy(date = event.date) }
             is TodoEditEvent.TimeChanged -> mutableState.update { it.copy(time = event.time) }
-            TodoEditEvent.TimeCleared -> mutableState.update { it.copy(time = null) }
+            TodoEditEvent.TimeCleared -> mutableState.update {
+                it.copy(
+                    time = null,
+                    remindOneDayBefore = false,
+                    remindFifteenMinutesBefore = false,
+                )
+            }
             is TodoEditEvent.CategoryChanged -> mutableState.update {
                 it.copy(
                     selectedCategoryId = event.categoryId,
@@ -111,7 +125,7 @@ class TodoEditPresenter(
                     TodoEditCategoryUiModel(category.id, category.name, category.color)
                 },
                 selectedCategoryId = selectedId,
-                isLoading = !(categoriesLoaded && todoLoaded),
+                isLoading = !(categoriesLoaded && todoLoaded && remindersLoaded),
                 error = when {
                     selectedId == null && it.mode == TodoEditMode.CREATE -> {
                         TodoEditError.CATEGORY_NOT_FOUND
@@ -136,14 +150,49 @@ class TodoEditPresenter(
                             date = result.value.date,
                             time = result.value.time,
                             selectedCategoryId = result.value.categoryId,
-                            isLoading = !(categoriesLoaded && todoLoaded),
+                            isLoading = !(categoriesLoaded && todoLoaded && remindersLoaded),
                             error = null,
                         )
                     }
+                    loadReminders(todoId)
                 }
                 is ServiceResult.Failure -> mutableState.update {
                     it.copy(isLoading = false, error = result.error.toEditError())
                 }
+            }
+        }
+    }
+
+    private fun loadReminders(todoId: Long) {
+        viewModelScope.launch {
+            todoService.observeReminders(todoId).collect { result ->
+                when (result) {
+                    is ServiceResult.Success -> {
+                        remindersLoaded = true
+                        val minutes = result.value.map(Reminder::minutesBefore).toSet()
+                        mutableState.update {
+                            it.copy(
+                                remindOneDayBefore = Reminder.ONE_DAY_BEFORE in minutes,
+                                remindFifteenMinutesBefore = Reminder.FIFTEEN_MINUTES_BEFORE in minutes,
+                                isLoading = !(categoriesLoaded && todoLoaded && remindersLoaded),
+                            )
+                        }
+                    }
+                    is ServiceResult.Failure -> mutableState.update {
+                        it.copy(isLoading = false, error = result.error.toEditError())
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setReminder(minutesBefore: Int, enabled: Boolean) {
+        if (mutableState.value.time == null || mutableState.value.isSaving) return
+        mutableState.update {
+            when (minutesBefore) {
+                Reminder.ONE_DAY_BEFORE -> it.copy(remindOneDayBefore = enabled)
+                Reminder.FIFTEEN_MINUTES_BEFORE -> it.copy(remindFifteenMinutesBefore = enabled)
+                else -> it
             }
         }
     }
@@ -188,20 +237,40 @@ class TodoEditPresenter(
                     updatedAt = now,
                 )
             }
-            val result = if (current.mode == TodoEditMode.CREATE) {
-                todoService.create(todo)
-            } else {
-                todoService.update(todo)
+            val reminderMinutes = buildSet {
+                if (current.remindOneDayBefore) add(Reminder.ONE_DAY_BEFORE)
+                if (current.remindFifteenMinutesBefore) add(Reminder.FIFTEEN_MINUTES_BEFORE)
             }
+            val result = todoService.saveWithReminders(todo, reminderMinutes)
             applySaveResult(result)
         }
     }
 
-    private suspend fun applySaveResult(result: ServiceResult<Todo>) {
+    private suspend fun applySaveResult(result: ServiceResult<com.example.todoapplication.application.service.TodoSaveResult>) {
         when (result) {
             is ServiceResult.Success -> {
-                mutableState.update { it.copy(isSaving = false) }
-                effectChannel.send(TodoEditEffect.Saved)
+                originalTodo = result.value.todo
+                when (result.value.alarmSyncStatus) {
+                    com.example.todoapplication.application.service.AlarmSyncStatus.SYNCHRONIZED -> {
+                        mutableState.update { it.copy(isSaving = false) }
+                        effectChannel.send(TodoEditEffect.Saved)
+                    }
+                    com.example.todoapplication.application.service.AlarmSyncStatus.INEXACT_SCHEDULED ->
+                        mutableState.update {
+                            it.copy(isSaving = false, error = TodoEditError.INEXACT_ALARM_SCHEDULED)
+                        }
+                    com.example.todoapplication.application.service.AlarmSyncStatus.NOTIFICATION_PERMISSION_DENIED ->
+                        mutableState.update {
+                            it.copy(
+                                isSaving = false,
+                                error = TodoEditError.NOTIFICATION_PERMISSION_DENIED,
+                            )
+                        }
+                    com.example.todoapplication.application.service.AlarmSyncStatus.FAILED ->
+                        mutableState.update {
+                            it.copy(isSaving = false, error = TodoEditError.ALARM_NOT_SCHEDULED)
+                        }
+                }
             }
             is ServiceResult.Failure -> mutableState.update {
                 it.copy(

@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -46,6 +48,44 @@ class TodoEditScreenTest {
             assertTrue(TodoEditEvent.CategoryChanged(2) in events)
             assertTrue(TodoEditEvent.Save in events)
         }
+    }
+
+    @Test
+    fun reminderOptionsAreIndependentWhenTimeExists() {
+        val events = mutableListOf<TodoEditEvent>()
+        setScreen(state(time = LocalTime.NOON), events::add)
+
+        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsEnabled().assertIsOff().performClick()
+        composeRule.onNodeWithTag(FIFTEEN_MINUTE_REMINDER_TAG).assertIsEnabled().assertIsOff().performClick()
+
+        composeRule.runOnIdle {
+            assertTrue(TodoEditEvent.SetOneDayReminder(true) in events)
+            assertTrue(TodoEditEvent.SetFifteenMinuteReminder(true) in events)
+        }
+
+    }
+
+    @Test
+    fun reminderOptionsAreDisabledWithoutTime() {
+        setScreen(state(time = null))
+
+        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(FIFTEEN_MINUTE_REMINDER_TAG).assertIsNotEnabled()
+    }
+
+    @Test
+    fun editScreenShowsPersistedReminderSelections() {
+        setScreen(
+            state(
+                mode = TodoEditMode.EDIT,
+                time = LocalTime.NOON,
+                remindOneDayBefore = true,
+                remindFifteenMinutesBefore = true,
+            ),
+        )
+
+        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsOn()
+        composeRule.onNodeWithTag(FIFTEEN_MINUTE_REMINDER_TAG).assertIsOn()
     }
 
     @Test
@@ -212,6 +252,8 @@ class TodoEditScreenTest {
         showDeleteConfirmation: Boolean = false,
         isDeleting: Boolean = false,
         validationErrors: Set<TodoEditValidationError> = emptySet(),
+        remindOneDayBefore: Boolean = false,
+        remindFifteenMinutesBefore: Boolean = false,
     ) = TodoEditUiState(
         mode = mode,
         todoId = if (mode == TodoEditMode.EDIT) 10 else null,
@@ -228,5 +270,7 @@ class TodoEditScreenTest {
         showDeleteConfirmation = showDeleteConfirmation,
         isDeleting = isDeleting,
         validationErrors = validationErrors,
+        remindOneDayBefore = remindOneDayBefore,
+        remindFifteenMinutesBefore = remindFifteenMinutesBefore,
     )
 }

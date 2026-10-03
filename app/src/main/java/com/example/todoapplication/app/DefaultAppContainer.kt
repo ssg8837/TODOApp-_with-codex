@@ -14,6 +14,8 @@ import com.example.todoapplication.data.repository.RoomTodoRepository
 import com.example.todoapplication.domain.repository.CategoryRepository
 import com.example.todoapplication.domain.repository.ReminderRepository
 import com.example.todoapplication.domain.repository.TodoRepository
+import com.example.todoapplication.notification.AlarmScheduler
+import com.example.todoapplication.notification.AndroidAlarmScheduler
 
 class DefaultAppContainer(
     context: Context,
@@ -28,9 +30,13 @@ class DefaultAppContainer(
     override val reminderRepository: ReminderRepository =
         RoomReminderRepository(database.reminderDao())
 
+    override val alarmScheduler: AlarmScheduler = AndroidAlarmScheduler(context.applicationContext)
+
     override val todoService: TodoService = DefaultTodoService(
         todoRepository = todoRepository,
         categoryRepository = categoryRepository,
+        reminderRepository = reminderRepository,
+        alarmScheduler = alarmScheduler,
     )
 
     override val categoryService: CategoryService = DefaultCategoryService(categoryRepository)

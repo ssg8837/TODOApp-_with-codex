@@ -4,9 +4,12 @@ import com.example.todoapplication.application.service.CategoryService
 import com.example.todoapplication.application.service.ServiceError
 import com.example.todoapplication.application.service.ServiceResult
 import com.example.todoapplication.application.service.TodoService
+import com.example.todoapplication.application.service.TodoSaveResult
+import com.example.todoapplication.application.service.AlarmSyncStatus
 import com.example.todoapplication.domain.model.Category
 import com.example.todoapplication.domain.model.CategoryColor
 import com.example.todoapplication.domain.model.Todo
+import com.example.todoapplication.domain.model.Reminder
 import com.example.todoapplication.test.MainDispatcherRule
 import java.time.Clock
 import java.time.Instant
@@ -48,14 +51,68 @@ class TodoEditPresenterTest {
         presenter.onEvent(TodoEditEvent.TitleChanged("회의"))
         presenter.onEvent(TodoEditEvent.DateChanged(changedDate))
         presenter.onEvent(TodoEditEvent.TimeChanged(LocalTime.of(9, 30)))
+        presenter.onEvent(TodoEditEvent.SetOneDayReminder(true))
+        presenter.onEvent(TodoEditEvent.SetFifteenMinuteReminder(true))
         presenter.onEvent(TodoEditEvent.CategoryChanged(USER_CATEGORY.id))
         assertEquals("회의", presenter.state.value.title)
         assertEquals(changedDate, presenter.state.value.date)
         assertEquals(LocalTime.of(9, 30), presenter.state.value.time)
         assertEquals(USER_CATEGORY.id, presenter.state.value.selectedCategoryId)
+        assertTrue(presenter.state.value.remindOneDayBefore)
+        assertTrue(presenter.state.value.remindFifteenMinutesBefore)
 
         presenter.onEvent(TodoEditEvent.TimeCleared)
         assertNull(presenter.state.value.time)
+        assertFalse(presenter.state.value.remindOneDayBefore)
+        assertFalse(presenter.state.value.remindFifteenMinutesBefore)
+    }
+
+    @Test
+    fun createDefaultsToNoRemindersAndCannotEnableWithoutTime() = runTest {
+        val presenter = presenter(FakeTodoService())
+        advanceUntilIdle()
+
+        presenter.onEvent(TodoEditEvent.SetOneDayReminder(true))
+        presenter.onEvent(TodoEditEvent.SetFifteenMinuteReminder(true))
+
+        assertFalse(presenter.state.value.remindOneDayBefore)
+        assertFalse(presenter.state.value.remindFifteenMinutesBefore)
+    }
+
+    @Test
+    fun editRestoresPersistedReminderSelections() = runTest {
+        val service = FakeTodoService().apply {
+            getResult = ServiceResult.Success(todo(id = 42, title = "기존", time = LocalTime.NOON))
+            reminderValues = listOf(Reminder(10, 42, Reminder.ONE_DAY_BEFORE))
+        }
+        val presenter = presenter(service, TodoEditMode.EDIT, 42)
+
+        advanceUntilIdle()
+
+        assertTrue(presenter.state.value.remindOneDayBefore)
+        assertFalse(presenter.state.value.remindFifteenMinutesBefore)
+    }
+
+    @Test
+    fun permissionDenialKeepsReminderSelectionAndTodoCanStillBePersisted() = runTest {
+        val service = FakeTodoService().apply {
+            alarmStatus = AlarmSyncStatus.NOTIFICATION_PERMISSION_DENIED
+        }
+        val presenter = presenter(service)
+        advanceUntilIdle()
+        presenter.onEvent(TodoEditEvent.TitleChanged("권한 없이 저장"))
+        presenter.onEvent(TodoEditEvent.TimeChanged(LocalTime.NOON))
+        presenter.onEvent(TodoEditEvent.SetFifteenMinuteReminder(true))
+        presenter.onEvent(TodoEditEvent.NotificationPermissionResult(false))
+
+        presenter.onEvent(TodoEditEvent.Save)
+        advanceUntilIdle()
+
+        assertEquals(1, service.created.size)
+        assertTrue(presenter.state.value.remindFifteenMinutesBefore)
+        assertTrue(presenter.state.value.notificationPermissionDenied)
+        assertEquals(TodoEditError.NOTIFICATION_PERMISSION_DENIED, presenter.state.value.error)
+        assertFalse(presenter.state.value.isSaving)
     }
 
     @Test
@@ -320,6 +377,8 @@ class TodoEditPresenterTest {
         var deleteResult: ServiceResult<Unit> = ServiceResult.Success(Unit)
         var deleteGate: CompletableDeferred<ServiceResult<Unit>>? = null
         var getResult: ServiceResult<Todo> = ServiceResult.Failure(ServiceError.TodoNotFound)
+        var reminderValues: List<Reminder> = emptyList()
+        var alarmStatus: AlarmSyncStatus = AlarmSyncStatus.SYNCHRONIZED
 
         override suspend fun create(todo: Todo): ServiceResult<Todo> {
             createAttempts++
@@ -331,6 +390,24 @@ class TodoEditPresenterTest {
             updated += todo
             return updateGate?.await() ?: ServiceResult.Success(todo)
         }
+
+        override suspend fun saveWithReminders(
+            todo: Todo,
+            reminderMinutesBefore: Set<Int>,
+        ): ServiceResult<TodoSaveResult> {
+            val result = if (todo.id == 0L) create(todo) else update(todo)
+            return when (result) {
+                is ServiceResult.Success -> ServiceResult.Success(
+                    TodoSaveResult(result.value, alarmStatus),
+                )
+                is ServiceResult.Failure -> result
+            }
+        }
+
+        override fun observeReminders(todoId: Long): Flow<ServiceResult<List<Reminder>>> =
+            MutableSharedFlow<ServiceResult<List<Reminder>>>(replay = 1).apply {
+                tryEmit(ServiceResult.Success(reminderValues))
+            }
 
         override suspend fun getById(todoId: Long): ServiceResult<Todo> = getResult
         override suspend fun delete(todoId: Long): ServiceResult<Unit> {

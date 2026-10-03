@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +66,8 @@ const val DELETE_TODO_TAG = "delete-todo"
 const val DELETE_DIALOG_TAG = "delete-dialog"
 const val CANCEL_DELETE_TAG = "cancel-delete"
 const val CONFIRM_DELETE_TAG = "confirm-delete"
+const val ONE_DAY_REMINDER_TAG = "reminder-one-day"
+const val FIFTEEN_MINUTE_REMINDER_TAG = "reminder-fifteen-minutes"
 
 @Composable
 fun TodoEditScreen(
@@ -133,6 +136,22 @@ fun TodoEditScreen(
                     onSelect = { showTimePicker = true },
                     onClear = { onEvent(TodoEditEvent.TimeCleared) },
                 )
+                ReminderSelection(
+                    timeAvailable = state.time != null,
+                    oneDay = state.remindOneDayBefore,
+                    fifteenMinutes = state.remindFifteenMinutesBefore,
+                    enabled = !state.isLoading && !state.isSaving && !state.isDeleting,
+                    onOneDayChanged = { onEvent(TodoEditEvent.SetOneDayReminder(it)) },
+                    onFifteenMinutesChanged = {
+                        onEvent(TodoEditEvent.SetFifteenMinuteReminder(it))
+                    },
+                )
+                if (state.notificationPermissionDenied) {
+                    Text(
+                        text = stringResource(R.string.notification_permission_denied_message),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 CategorySelection(
                     categories = state.categories,
                     selectedCategoryId = state.selectedCategoryId,
@@ -190,6 +209,45 @@ fun TodoEditScreen(
                 onEvent(TodoEditEvent.TimeChanged(it))
             },
         )
+    }
+}
+
+@Composable
+private fun ReminderSelection(
+    timeAvailable: Boolean,
+    oneDay: Boolean,
+    fifteenMinutes: Boolean,
+    enabled: Boolean,
+    onOneDayChanged: (Boolean) -> Unit,
+    onFifteenMinutesChanged: (Boolean) -> Unit,
+) {
+    Column {
+        Text(stringResource(R.string.todo_reminder_label), style = MaterialTheme.typography.labelLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = oneDay,
+                onCheckedChange = onOneDayChanged,
+                enabled = enabled && timeAvailable,
+                modifier = Modifier.testTag(ONE_DAY_REMINDER_TAG),
+            )
+            Text(stringResource(R.string.reminder_one_day_before))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(
+                checked = fifteenMinutes,
+                onCheckedChange = onFifteenMinutesChanged,
+                enabled = enabled && timeAvailable,
+                modifier = Modifier.testTag(FIFTEEN_MINUTE_REMINDER_TAG),
+            )
+            Text(stringResource(R.string.reminder_fifteen_minutes_before))
+        }
+        if (!timeAvailable) {
+            Text(
+                stringResource(R.string.reminder_requires_time),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -427,4 +485,7 @@ private val TodoEditError.stringResource: Int
         TodoEditError.INVALID_TODO -> R.string.error_edit_invalid_todo
         TodoEditError.PERSISTENCE_FAILURE -> R.string.error_edit_persistence_failure
         TodoEditError.OPERATION_FAILED -> R.string.error_edit_operation_failed
+        TodoEditError.ALARM_NOT_SCHEDULED -> R.string.error_alarm_not_scheduled
+        TodoEditError.NOTIFICATION_PERMISSION_DENIED -> R.string.notification_permission_denied_message
+        TodoEditError.INEXACT_ALARM_SCHEDULED -> R.string.inexact_alarm_scheduled_message
     }

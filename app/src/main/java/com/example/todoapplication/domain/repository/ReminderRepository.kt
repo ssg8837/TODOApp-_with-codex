@@ -10,6 +10,8 @@ interface ReminderRepository {
 
     fun observeByTodoId(todoId: Long): Flow<List<Reminder>>
 
+    suspend fun getById(id: Long): Reminder?
+
     suspend fun deleteById(id: Long): Boolean
 
     suspend fun deleteByTodoId(todoId: Long): Int

@@ -1,10 +1,19 @@
 package com.example.todoapplication.feature.todo.edit
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.todoapplication.app.TodoApplication
@@ -32,6 +41,15 @@ fun TodoEditRoute(
     }
     val presenter: TodoEditPresenter = viewModel(factory = factory)
     val state by presenter.state.collectAsStateWithLifecycle()
+    var pendingReminderEvent by remember { mutableStateOf<TodoEditEvent?>(null) }
+    var notificationPermissionRequested by rememberSaveable { mutableStateOf(false) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        presenter.onEvent(TodoEditEvent.NotificationPermissionResult(granted))
+        pendingReminderEvent?.let(presenter::onEvent)
+        pendingReminderEvent = null
+    }
 
     LaunchedEffect(presenter) {
         presenter.effects.collect { effect ->
@@ -44,7 +62,31 @@ fun TodoEditRoute(
 
     TodoEditScreen(
         state = state,
-        onEvent = presenter::onEvent,
+        onEvent = { event ->
+            val enablesReminder = when (event) {
+                is TodoEditEvent.SetOneDayReminder -> event.enabled
+                is TodoEditEvent.SetFifteenMinuteReminder -> event.enabled
+                else -> false
+            }
+            val requiresPermission = enablesReminder &&
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    application,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                ) != PackageManager.PERMISSION_GRANTED
+            if (requiresPermission) {
+                if (notificationPermissionRequested) {
+                    presenter.onEvent(TodoEditEvent.NotificationPermissionResult(false))
+                    presenter.onEvent(event)
+                } else {
+                    notificationPermissionRequested = true
+                    pendingReminderEvent = event
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            } else {
+                presenter.onEvent(event)
+            }
+        },
         onBack = onBack,
     )
 }

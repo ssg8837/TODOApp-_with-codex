@@ -35,6 +35,7 @@ class DefaultAppContainerTest {
         assertNotNull(container.todoRepository)
         assertNotNull(container.categoryRepository)
         assertNotNull(container.reminderRepository)
+        assertNotNull(container.alarmScheduler)
         assertNotNull(container.todoService)
         assertNotNull(container.categoryService)
         assertNotNull(container.reminderService)

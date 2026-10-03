@@ -4,6 +4,11 @@ import java.time.LocalDate
 import java.time.LocalTime
 
 sealed interface TodoEditEvent {
+    data class SetOneDayReminder(val enabled: Boolean) : TodoEditEvent
+
+    data class SetFifteenMinuteReminder(val enabled: Boolean) : TodoEditEvent
+
+    data class NotificationPermissionResult(val granted: Boolean) : TodoEditEvent
     data class TitleChanged(val title: String) : TodoEditEvent
 
     data class DateChanged(val date: LocalDate) : TodoEditEvent

@@ -7,12 +7,14 @@ import com.example.todoapplication.data.local.TodoDatabase
 import com.example.todoapplication.domain.repository.CategoryRepository
 import com.example.todoapplication.domain.repository.ReminderRepository
 import com.example.todoapplication.domain.repository.TodoRepository
+import com.example.todoapplication.notification.AlarmScheduler
 
 interface AppContainer {
     val database: TodoDatabase
     val todoRepository: TodoRepository
     val categoryRepository: CategoryRepository
     val reminderRepository: ReminderRepository
+    val alarmScheduler: AlarmScheduler
     val todoService: TodoService
     val categoryService: CategoryService
     val reminderService: ReminderService

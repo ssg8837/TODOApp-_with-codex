@@ -25,6 +25,10 @@ internal class RoomReminderRepository(
             .map { entities -> entities.map(ReminderMapper::toDomain) }
             .mapDataAccessErrors()
 
+    override suspend fun getById(id: Long): Reminder? = dataAccess {
+        reminderDao.getById(id)?.let(ReminderMapper::toDomain)
+    }
+
     override suspend fun deleteById(id: Long): Boolean = dataAccess {
         reminderDao.deleteById(id) == 1
     }

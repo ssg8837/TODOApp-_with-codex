@@ -23,6 +23,7 @@ interface FeaturePresenter {
 
 - `TodoListPresenter`: 날짜 상태, TodoService 목록과 CategoryService 목록의 반응형 결합, 화면용 `TodoListItemUiModel` 제공, 사용자 완료 변경 이벤트 전달 및 결과 표시
 - `TodoEditPresenter`: 신규·기존 화면 상태와 입력값 관리, Service 저장 결과 및 검증 오류 표시
+- `TodoEditPresenter`는 `remindOneDayBefore`, `remindFifteenMinutesBefore`를 관리한다. 수정 시 Service의 Reminder Flow에서 선택을 복원하고, 시간 제거 시 둘 다 해제한다. 저장은 Todo와 선택된 minutesBefore 집합을 하나의 Service 유스케이스로 전달한다.
 - `CategoryPresenter`: 저장 순서의 Category 화면 상태, 색상·재정렬 입력과 Service 결과 표시
 
 ## 경계
@@ -37,6 +38,7 @@ interface FeaturePresenter {
 - 빈 필드 등 즉각적인 UI 피드백을 위한 보조 검증은 허용하지만 최종 비즈니스 검증은 Application Service가 수행한다.
 - 모든 의존성은 constructor로 받고, AndroidX ViewModel 생성에는 명시적인 Factory를 사용한다.
 - Alarm 예약 실패는 저장 성공과 구분되는 사용자 안내 상태로 표현한다.
+- Notification 런타임 권한 요청은 Route/UI 경계에서 수행하고 결과만 Event로 Presenter에 전달한다. Presenter와 Service는 Activity를 참조하지 않는다.
 - Category 재정렬 이벤트는 Service에 전달한다. `일반` 이동 거부와 사용자 Category의 연속된 `sortOrder` 구성은 `CategoryService`의 비즈니스 규칙이다.
 
 ### Phase 9 Category 관리

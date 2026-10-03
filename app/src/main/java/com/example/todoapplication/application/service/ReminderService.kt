@@ -10,6 +10,8 @@ interface ReminderService {
 
     fun observeByTodoId(todoId: Long): Flow<ServiceResult<List<Reminder>>>
 
+    suspend fun getById(reminderId: Long): ServiceResult<Reminder>
+
     suspend fun replaceReminders(
         todoId: Long,
         reminders: List<Reminder>,

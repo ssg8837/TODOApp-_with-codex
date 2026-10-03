@@ -172,6 +172,8 @@ class FakeReminderRepository(
     override fun observeByTodoId(todoId: Long): Flow<List<Reminder>> =
         reminders.map { values -> values.filter { it.todoId == todoId } }
 
+    override suspend fun getById(id: Long): Reminder? = reminders.value.firstOrNull { it.id == id }
+
     override suspend fun deleteById(id: Long): Boolean {
         calls += "deleteById"
         writeCount += 1

@@ -77,4 +77,5 @@ Receiver는 Intent의 Reminder ID와 예약 시각을 키로 사용하되, 알�
 - 발화 시각은 Phase 11의 `ReminderCalculator`와 주입된 `Clock`/`ZoneId`를 재사용한다.
 - 유효 Reminder는 기존 `AlarmScheduler.schedule()`로 재예약하므로 PendingIntent identity와 Exact→Inexact fallback 정책이 동일하다.
 - 후보 하나의 조회 또는 예약 실패는 다른 후보의 복구를 중단하지 않는다. 결과는 전체 성공, 일부 실패, 전체 실패와 건수로 구분하되 부팅 시 UI를 표시하지 않는다.
+- Coroutine cancellation은 일반 복구 실패로 변환하지 않고 상위 coroutine에 전파하며, Receiver의 `PendingResult`는 `finally`에서 종료한다.
 - 복구 트리거는 `BOOT_COMPLETED`만 사용하며 앱 시작, 시간대·시각 변경, 앱 업데이트에는 전체 DB 스캔을 추가하지 않는다.

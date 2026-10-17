@@ -3,12 +3,14 @@ package com.example.todoapplication.notification
 import com.example.todoapplication.application.service.ReminderRecoveryOutcome
 import com.example.todoapplication.application.service.ReminderRecoveryResult
 import com.example.todoapplication.application.service.ReminderRecoveryService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -42,6 +44,25 @@ class BootReceiverTest {
 
         launchRecovery(service, StandardTestDispatcher(testScheduler)) { finished = true }
         advanceUntilIdle()
+
+        assertTrue(finished)
+    }
+
+    @Test
+    fun recoveryFinishesAndPropagatesCancellation() = runTest {
+        var finished = false
+        val service = object : ReminderRecoveryService {
+            override suspend fun restoreScheduledReminders(): ReminderRecoveryResult {
+                throw CancellationException("cancelled")
+            }
+        }
+
+        try {
+            restoreAndFinish(service) { finished = true }
+            fail("CancellationException must be propagated")
+        } catch (_: CancellationException) {
+            // Expected: cancellation is control flow, not a recoverable boot failure.
+        }
 
         assertTrue(finished)
     }

@@ -113,6 +113,12 @@ class TodoEditPresenterTest {
         assertTrue(presenter.state.value.notificationPermissionDenied)
         assertEquals(TodoEditError.NOTIFICATION_PERMISSION_DENIED, presenter.state.value.error)
         assertFalse(presenter.state.value.isSaving)
+
+        presenter.onEvent(TodoEditEvent.Save)
+        advanceUntilIdle()
+
+        assertEquals(1, service.created.size)
+        assertEquals(1, service.updated.size)
     }
 
     @Test
@@ -132,6 +138,25 @@ class TodoEditPresenterTest {
         assertEquals(SYSTEM_CATEGORY.id, service.created.single().categoryId)
         assertFalse(service.created.single().isCompleted)
         assertEquals(TodoEditEffect.Saved, effect.await())
+    }
+
+    @Test
+    fun inexactAlarmFallbackStillCompletesSuccessfulCreate() = runTest {
+        val service = FakeTodoService().apply {
+            alarmStatus = AlarmSyncStatus.INEXACT_SCHEDULED
+        }
+        val presenter = presenter(todoService = service)
+        advanceUntilIdle()
+        presenter.onEvent(TodoEditEvent.TitleChanged("inexact 저장"))
+        presenter.onEvent(TodoEditEvent.TimeChanged(LocalTime.of(20, 30)))
+        val effect = async { presenter.effects.first() }
+
+        presenter.onEvent(TodoEditEvent.Save)
+        advanceUntilIdle()
+
+        assertEquals(1, service.created.size)
+        assertEquals(TodoEditEffect.Saved, effect.await())
+        assertFalse(presenter.state.value.isSaving)
     }
 
     @Test

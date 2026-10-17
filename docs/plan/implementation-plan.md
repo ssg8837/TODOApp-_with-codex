@@ -1002,13 +1002,19 @@ Flow 및 Android 시스템 연동 제약을 KDoc과 필요한 주석으로 문�
 
 ### 테스트 항목
 
-- `./gradlew assembleDebug`
-- `./gradlew testDebugUnitTest`
-- `./gradlew connectedDebugAndroidTest`
-- 앱 프로세스 종료/재실행 후 데이터 및 Category 순서 유지
-- 실제 알림 권한 허용/거부 및 미래 Notification
-- 에뮬레이터 재부팅 후 Alarm 복구
-- 전체 제품 완료조건 체크리스트 수동 확인
+- Phase 12.5의 JVM 113개, Android 71개, Debug 빌드 성공 결과를 baseline으로 사용한다.
+- 요구사항↔구현↔기존 테스트 traceability와 계층 의존성을 코드 검토로 확인한다.
+- Pixel 8 AVD에서는 Alarm 대기와 재부팅을 반복하지 않고 CRUD·Category·필터 연결 흐름만 확인한다.
+- 결함이 발견되면 관련 테스트만 실행하고, 여러 계층이나 DB/Alarm 핵심 계약 변경일 때만 전체 테스트를 다시 실행한다.
+
+### 경량 최종 검증 결과
+
+- TODO 등록·수정·완료·미완료 복원·삭제와 목록 반영을 확인했다.
+- Category 생성·이름/색상 수정과 사용 중 삭제 시 TODO 유지·`일반` 재지정을 확인했다.
+- Category와 미완료 AND 필터, 완료 시 제거, 선택 Category 삭제 시 전체 복귀를 확인했다.
+- Inexact fallback 성공 후 등록 화면에 남아 중복 저장될 수 있던 문제와 Boot 복구 cancellation을 일반 실패로 삼키던 문제를 수정했다.
+- 관련 Presenter/BootReceiver JVM 테스트와 `git diff --check`로 수정 범위를 검증한다.
+- Notification 실제 발화·클릭 및 Boot Recovery 실제 재부팅 결과는 Phase 11~12 검증을 재사용한다.
 
 ### 완료 조건
 

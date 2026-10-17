@@ -226,7 +226,7 @@ class TodoEditPresenter(
         viewModelScope.launch {
             val now = Instant.now(clock)
             val existing = originalTodo
-            val todo = if (current.mode == TodoEditMode.EDIT && existing != null) {
+            val todo = if (existing != null) {
                 existing.copy(
                     title = current.title,
                     date = current.date,
@@ -264,10 +264,10 @@ class TodoEditPresenter(
                         mutableState.update { it.copy(isSaving = false) }
                         effectChannel.send(TodoEditEffect.Saved)
                     }
-                    com.example.todoapplication.application.service.AlarmSyncStatus.INEXACT_SCHEDULED ->
-                        mutableState.update {
-                            it.copy(isSaving = false, error = TodoEditError.INEXACT_ALARM_SCHEDULED)
-                        }
+                    com.example.todoapplication.application.service.AlarmSyncStatus.INEXACT_SCHEDULED -> {
+                        mutableState.update { it.copy(isSaving = false) }
+                        effectChannel.send(TodoEditEffect.Saved)
+                    }
                     com.example.todoapplication.application.service.AlarmSyncStatus.NOTIFICATION_PERMISSION_DENIED ->
                         mutableState.update {
                             it.copy(

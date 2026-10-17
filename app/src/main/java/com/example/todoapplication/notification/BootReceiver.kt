@@ -50,12 +50,22 @@ internal fun launchRecovery(
     onFinished: () -> Unit,
 ) {
     CoroutineScope(dispatcher).launch {
-        try {
-            recoveryService.restoreScheduledReminders()
-        } catch (_: RuntimeException) {
-            // A boot-time recovery failure must not crash the application process.
-        } finally {
-            onFinished()
-        }
+        restoreAndFinish(recoveryService, onFinished)
+    }
+}
+
+/** 일반 복구 실패는 격리하되 coroutine cancellation은 호출 scope에 전파한다. */
+internal suspend fun restoreAndFinish(
+    recoveryService: ReminderRecoveryService,
+    onFinished: () -> Unit,
+) {
+    try {
+        recoveryService.restoreScheduledReminders()
+    } catch (error: CancellationException) {
+        throw error
+    } catch (_: RuntimeException) {
+        // A boot-time recovery failure must not crash the application process.
+    } finally {
+        onFinished()
     }
 }

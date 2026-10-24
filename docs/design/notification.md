@@ -64,7 +64,15 @@ Todo/Reminder 저장
 
 ## Notification Channel
 
-앱의 알림 기능 초기화 시 TODO 알림용 Notification Channel 하나를 생성한다.
+앱의 알림 기능 초기화 시 TODO 알림용 Notification Channel을 생성한다.
+
+- 채널 ID: `todo_reminders_v2` (Phase 14에서 진동 지원을 위해 기존 `todo_reminders`에서 채널 버전 마이그레이션 적용)
+- 중요도: `NotificationManager.IMPORTANCE_DEFAULT`
+- 진동: `enableVibration(true)`, 기본 진동 패턴 `[0L, 250L, 150L, 250L]`
+- 소리: 시스템 기본 알림음 유지
+- 사용자 권한: Manifest에 `android.permission.VIBRATE` (normal permission)를 선언하여 런타임 권한 요청 없이 동작
+- 시스템 설정 및 DND 존중: 시스템 알림 설정에서 채널 진동/알림을 끄거나 방해금지(DND) 모드가 활성화된 경우 시스템 정책을 우회하지 않으며, 앱 실행 시 시스템 설정을 강제로 덮어쓰지 않음
+- 기존 채널 보존: 기존 설치 사용자의 설정을 파괴하지 않기 위해 레거시 채널(`todo_reminders`)을 강제로 삭제하지 않고 신규 발화 알림은 `todo_reminders_v2`를 사용
 
 Receiver는 Intent의 Reminder ID와 예약 시각을 키로 사용하되, 알림 표시 직전에 Room을 다시 조회한다. Todo/Reminder 삭제, 완료, 예정 시각 변경이 확인되면 늦게 도착한 broadcast를 무시한다. 알림 선택 시 Todo ID만 전달하여 수정 화면에서 최신 데이터를 다시 읽는다.
 

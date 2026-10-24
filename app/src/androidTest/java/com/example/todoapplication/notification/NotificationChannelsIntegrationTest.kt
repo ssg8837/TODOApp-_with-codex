@@ -61,7 +61,7 @@ class NotificationChannelsIntegrationTest {
     }
 
     @Test
-    fun notificationFactoryUsesMigratedChannel() {
+    fun notificationFactoryUsesMigratedChannelAndFormatsCustomReminderText() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val todo = Todo(
             id = 10L,
@@ -73,16 +73,37 @@ class NotificationChannelsIntegrationTest {
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )
-        val reminder = Reminder(
-            id = 20L,
-            todoId = 10L,
-            minutesBefore = Reminder.FIFTEEN_MINUTES_BEFORE,
+        val fifteenMin = NotificationFactory.create(
+            context,
+            todo,
+            Reminder(id = 20L, todoId = 10L, minutesBefore = Reminder.FIFTEEN_MINUTES_BEFORE),
+        )
+        val oneHour = NotificationFactory.create(
+            context,
+            todo,
+            Reminder(id = 21L, todoId = 10L, minutesBefore = Reminder.ONE_HOUR_BEFORE),
+        )
+        val custom = NotificationFactory.create(
+            context,
+            todo,
+            Reminder(id = 22L, todoId = 10L, minutesBefore = 150),
         )
 
-        val notification = NotificationFactory.create(context, todo, reminder)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            assertEquals(NotificationChannels.TODO_REMINDERS, notification.channelId)
+            assertEquals(NotificationChannels.TODO_REMINDERS, fifteenMin.channelId)
         }
+        assertEquals(
+            "예정 시간 15분 전입니다.",
+            fifteenMin.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString(),
+        )
+        assertEquals(
+            "예정 시간 1시간 전입니다.",
+            oneHour.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString(),
+        )
+        assertEquals(
+            "예정 시간 2시간 30분 전입니다.",
+            custom.extras.getCharSequence(android.app.Notification.EXTRA_TEXT)?.toString(),
+        )
     }
 }
 

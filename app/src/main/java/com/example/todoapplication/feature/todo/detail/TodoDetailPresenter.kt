@@ -73,7 +73,7 @@ class TodoDetailPresenter(
                         val category = categories.firstOrNull { it.id == todo.categoryId }
                         val reminders = (reminderResult as? ServiceResult.Success)?.value
                             ?.map(Reminder::minutesBefore)
-                            ?.sorted()
+                            ?.sortedDescending()
                             .orEmpty()
 
                         mutableState.update {

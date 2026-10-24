@@ -68,6 +68,9 @@ fun TodoEditRoute(
         state = state,
         onEvent = { event ->
             val enablesReminder = when (event) {
+                is TodoEditEvent.ToggleReminder -> event.offsetMinutes !in state.selectedReminderOffsets
+                is TodoEditEvent.AddCustomReminder -> true
+                is TodoEditEvent.UpdateCustomReminder -> true
                 is TodoEditEvent.SetOneDayReminder -> event.enabled
                 is TodoEditEvent.SetFifteenMinuteReminder -> event.enabled
                 else -> false

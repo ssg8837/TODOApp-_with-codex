@@ -20,7 +20,8 @@ Todo/Reminder 저장
 - Service는 저장과 Alarm 실행 순서를 제어하지만 DB transaction의 내부 절차는 Repository에 위임한다.
 
 - 알림 시각은 `TODO 예정일시 - minutesBefore`다.
-- `minutesBefore`의 MVP 값은 `15`, `1440`이며 복수 선택을 허용한다.
+- `minutesBefore`는 0보다 큰 양의 분 단위 정수(`offsetMinutes > 0`)이며, 기본 프리셋(`15`, `60`, `1440`)과 사용자 지정 간격(예: `150`, `4320` 등)의 복수 선택을 허용한다.
+- Notification 본문과 화면 표시 문자열은 `ReminderDurationFormatter`를 통해 `0`인 단위를 생략한 일/시간/분 조합(예: `예정 시간 2시간 30분 전입니다.`)으로 생성한다.
 - 각 Alarm은 Todo와 Reminder를 함께 식별하는 안정적인 ID를 가진다.
 - 날짜, 시간 또는 Reminder 변경 시 기존 Alarm을 취소하고 등록 가능한 Alarm을 다시 계산한다.
 - TODO 삭제 시 미래 Alarm을 취소하고 Reminder도 삭제한다.

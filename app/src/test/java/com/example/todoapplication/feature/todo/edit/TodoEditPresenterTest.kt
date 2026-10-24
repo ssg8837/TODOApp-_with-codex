@@ -80,17 +80,77 @@ class TodoEditPresenterTest {
     }
 
     @Test
-    fun editRestoresPersistedReminderSelections() = runTest {
+    fun editRestoresPersistedPresetAndCustomReminderSelections() = runTest {
         val service = FakeTodoService().apply {
             getResult = ServiceResult.Success(todo(id = 42, title = "기존", time = LocalTime.NOON))
-            reminderValues = listOf(Reminder(10, 42, Reminder.ONE_DAY_BEFORE))
+            reminderValues = listOf(
+                Reminder(10, 42, Reminder.ONE_DAY_BEFORE),
+                Reminder(11, 42, 150),
+                Reminder(12, 42, 4_320),
+            )
         }
         val presenter = presenter(service, TodoEditMode.EDIT, 42)
 
         advanceUntilIdle()
 
         assertTrue(presenter.state.value.remindOneDayBefore)
+        assertFalse(presenter.state.value.remindOneHourBefore)
         assertFalse(presenter.state.value.remindFifteenMinutesBefore)
+        assertEquals(listOf(4_320, 150), presenter.state.value.customReminderOffsets)
+        assertEquals(listOf(4_320, Reminder.ONE_DAY_BEFORE, 150), presenter.state.value.sortedReminderOffsets)
+    }
+
+    @Test
+    fun toggleAddUpdateRemoveAndClearCustomAndPresetReminders() = runTest {
+        val service = FakeTodoService()
+        val presenter = presenter(service)
+        advanceUntilIdle()
+
+        presenter.onEvent(TodoEditEvent.TitleChanged("사용자 지정 알림"))
+        presenter.onEvent(TodoEditEvent.TimeChanged(LocalTime.of(14, 0)))
+
+        // 15분 전, 1시간 전 토글
+        presenter.onEvent(TodoEditEvent.ToggleReminder(Reminder.FIFTEEN_MINUTES_BEFORE))
+        presenter.onEvent(TodoEditEvent.ToggleReminder(Reminder.ONE_HOUR_BEFORE))
+        assertTrue(presenter.state.value.remindFifteenMinutesBefore)
+        assertTrue(presenter.state.value.remindOneHourBefore)
+
+        // 사용자 지정 150분(2시간 30분), 4320분(3일) 추가 + 중복 150분 추가 시도
+        presenter.onEvent(TodoEditEvent.AddCustomReminder(150))
+        presenter.onEvent(TodoEditEvent.AddCustomReminder(150))
+        presenter.onEvent(TodoEditEvent.AddCustomReminder(4_320))
+        assertEquals(listOf(4_320, 150), presenter.state.value.customReminderOffsets)
+
+        // 직접 설정으로 프리셋(1440분 = 1일 전) 입력 시 프리셋 선택으로 귀속되고 사용자 목록에는 중복 추가되지 않음
+        presenter.onEvent(TodoEditEvent.AddCustomReminder(Reminder.ONE_DAY_BEFORE))
+        assertTrue(presenter.state.value.remindOneDayBefore)
+        assertEquals(listOf(4_320, 150), presenter.state.value.customReminderOffsets)
+
+        // 사용자 지정 알림 수정 (150분 -> 180분)
+        presenter.onEvent(TodoEditEvent.UpdateCustomReminder(150, 180))
+        assertEquals(listOf(4_320, 180), presenter.state.value.customReminderOffsets)
+
+        // 사용자 지정 알림 삭제 (4320분 삭제)
+        presenter.onEvent(TodoEditEvent.RemoveReminder(4_320))
+        assertEquals(listOf(180), presenter.state.value.customReminderOffsets)
+
+        // 저장 시 선택된 프리셋 + 사용자 지정 offset 모두 전달
+        presenter.onEvent(TodoEditEvent.Save)
+        advanceUntilIdle()
+        assertEquals(
+            setOf(
+                Reminder.FIFTEEN_MINUTES_BEFORE,
+                Reminder.ONE_HOUR_BEFORE,
+                Reminder.ONE_DAY_BEFORE,
+                180,
+            ),
+            service.savedReminderOffsets.single(),
+        )
+
+        // 시간 제거 시 프리셋 및 사용자 지정 알림 모두 초기화
+        presenter.onEvent(TodoEditEvent.TimeCleared)
+        assertTrue(presenter.state.value.selectedReminderOffsets.isEmpty())
+        assertTrue(presenter.state.value.customReminderOffsets.isEmpty())
     }
 
     @Test
@@ -393,6 +453,7 @@ class TodoEditPresenterTest {
     private class FakeTodoService : TodoService {
         val created = mutableListOf<Todo>()
         val updated = mutableListOf<Todo>()
+        val savedReminderOffsets = mutableListOf<Set<Int>>()
         var createAttempts = 0
         var createResult: ServiceResult<Todo>? = null
         var createGate: CompletableDeferred<ServiceResult<Todo>>? = null
@@ -420,6 +481,7 @@ class TodoEditPresenterTest {
             todo: Todo,
             reminderMinutesBefore: Set<Int>,
         ): ServiceResult<TodoSaveResult> {
+            savedReminderOffsets += reminderMinutesBefore
             val result = if (todo.id == 0L) create(todo) else update(todo)
             return when (result) {
                 is ServiceResult.Success -> ServiceResult.Success(

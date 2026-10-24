@@ -1059,6 +1059,36 @@ TODO 목록 및 Notification 클릭 시 즉시 편집 화면으로 진입하던 
 - Notification 클릭 시 `todo/detail/{todoId}`로 진입하도록 Navigation 및 Activity Intent 흐름 갱신
 - Todo 미존재/삭제 시 오류 화면 표시 및 안전한 복귀 지원
 
+## Phase 15: 앱 아이콘 / Release Polish
+
+### 목적
+
+실제 스마트폰에 설치했을 때 완성도 높은 앱으로 인식될 수 있도록 Launcher Icon, Round Icon, Themed Icon(Monochrome) 및 앱 표시 정보를 정리한다.
+
+### 구현 상세
+
+- Adaptive launcher icon (`ic_launcher_background`, `ic_launcher_foreground`) 적용
+- Round icon (`ic_launcher_round`) 대응
+- Themed / Monochrome icon (`<monochrome android:drawable="@drawable/ic_launcher_foreground" />`) 적용
+- Legacy launcher icon (`mipmap-mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) 갱신
+- Safe area (반경 33dp 이내) 검증을 통한 마스크 잘림 방지
+- 앱 표시 이름(`@string/app_name`)을 정식 명칭 `TODO`로 정리
+
+## Phase 16: 사용자 지정 Reminder 시간
+
+### 목적
+
+기존 고정 Reminder(`1일 전 / 15분 전`)를 범용 `offsetMinutes` 기반 구조로 확장하여 `[15분 전]`, `[1시간 전]`, `[1일 전]` 프리셋과 `[+ 직접 설정]`(일/시간/분 조합)을 통한 다중 알림 설정·수정·삭제를 지원한다.
+
+### 구현 상세
+
+- `Reminder`: `ONE_HOUR_BEFORE = 60`, `PRESET_MINUTES_BEFORE = setOf(15, 60, 1440)`, `MAX_MINUTES_BEFORE` 정의
+- `ReminderDurationFormatter`: `offsetMinutes`와 `(days, hours, minutes)` 간 분해/합산, 입력 검증(`> 0`, 오버플로 방지), 0 단위 생략 포맷팅 제공
+- `ReminderValidator`: 양수 `minutesBefore` 일반화 및 동일 TODO 내 중복 offset 검증(`DUPLICATE_MINUTES_BEFORE`)
+- Room DB Version `1 -> 2` 및 `MIGRATION_1_2`: 기존 Reminder 데이터를 보존하며 `(todo_id, minutes_before)` 고유 인덱스 추가
+- `TodoEditUiState` / `TodoEditEvent` / `TodoEditPresenter` / `TodoEditScreen`: `selectedReminderOffsets: Set<Int>` 기반 프리셋 토글 및 사용자 지정 알림 추가·수정·삭제 다이얼로그 제공
+- `TodoDetailPresenter` / `TodoDetailScreen` / `NotificationFactory`: 프리셋 및 사용자 지정 알림의 내림차순 표시 및 동적 시간 문구 생성
+
 ## Phase 완료 보고 형식
 
 ```text

@@ -15,15 +15,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -44,8 +46,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.todoapplication.R
+import com.example.todoapplication.domain.model.Reminder
+import com.example.todoapplication.domain.reminder.ReminderDurationFormatter
 import com.example.todoapplication.ui.theme.toComposeColor
 import java.time.Instant
 import java.time.LocalDate
@@ -67,7 +74,19 @@ const val DELETE_DIALOG_TAG = "delete-dialog"
 const val CANCEL_DELETE_TAG = "cancel-delete"
 const val CONFIRM_DELETE_TAG = "confirm-delete"
 const val ONE_DAY_REMINDER_TAG = "reminder-one-day"
+const val ONE_HOUR_REMINDER_TAG = "reminder-one-hour"
 const val FIFTEEN_MINUTE_REMINDER_TAG = "reminder-fifteen-minutes"
+const val ADD_CUSTOM_REMINDER_TAG = "reminder-add-custom"
+const val CUSTOM_REMINDER_DIALOG_TAG = "custom-reminder-dialog"
+const val CUSTOM_REMINDER_DAYS_INPUT_TAG = "custom-reminder-days-input"
+const val CUSTOM_REMINDER_HOURS_INPUT_TAG = "custom-reminder-hours-input"
+const val CUSTOM_REMINDER_MINUTES_INPUT_TAG = "custom-reminder-minutes-input"
+const val CUSTOM_REMINDER_CONFIRM_TAG = "custom-reminder-confirm"
+const val CUSTOM_REMINDER_CANCEL_TAG = "custom-reminder-cancel"
+const val CUSTOM_REMINDER_ERROR_TAG = "custom-reminder-error"
+const val CUSTOM_REMINDER_ITEM_TAG_PREFIX = "custom-reminder-item-"
+const val CUSTOM_REMINDER_EDIT_TAG_PREFIX = "custom-reminder-edit-"
+const val CUSTOM_REMINDER_DELETE_TAG_PREFIX = "custom-reminder-delete-"
 
 /**
  * [TodoEditUiState]를 렌더링하고 입력 callback만 방출하는 stateless 편집 Screen.
@@ -82,6 +101,8 @@ fun TodoEditScreen(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var customReminderDialogEditingOffset by remember { mutableStateOf<Int?>(null) }
+    var showCustomReminderDialog by remember { mutableStateOf(false) }
 
     Scaffold(modifier = modifier.fillMaxSize()) { contentPadding ->
         Column(
@@ -142,13 +163,21 @@ fun TodoEditScreen(
                 )
                 ReminderSelection(
                     timeAvailable = state.time != null,
-                    oneDay = state.remindOneDayBefore,
                     fifteenMinutes = state.remindFifteenMinutesBefore,
+                    oneHour = state.remindOneHourBefore,
+                    oneDay = state.remindOneDayBefore,
+                    customOffsets = state.customReminderOffsets,
                     enabled = !state.isLoading && !state.isSaving && !state.isDeleting,
-                    onOneDayChanged = { onEvent(TodoEditEvent.SetOneDayReminder(it)) },
-                    onFifteenMinutesChanged = {
-                        onEvent(TodoEditEvent.SetFifteenMinuteReminder(it))
+                    onTogglePreset = { offset -> onEvent(TodoEditEvent.ToggleReminder(offset)) },
+                    onRequestAddCustom = {
+                        customReminderDialogEditingOffset = null
+                        showCustomReminderDialog = true
                     },
+                    onRequestEditCustom = { offset ->
+                        customReminderDialogEditingOffset = offset
+                        showCustomReminderDialog = true
+                    },
+                    onRemoveCustom = { offset -> onEvent(TodoEditEvent.RemoveReminder(offset)) },
                 )
                 if (state.notificationPermissionDenied) {
                     Text(
@@ -214,36 +243,115 @@ fun TodoEditScreen(
             },
         )
     }
+    if (showCustomReminderDialog) {
+        CustomReminderDialog(
+            editingOffsetMinutes = customReminderDialogEditingOffset,
+            onDismiss = {
+                showCustomReminderDialog = false
+                customReminderDialogEditingOffset = null
+            },
+            onConfirm = { newOffsetMinutes ->
+                val oldOffset = customReminderDialogEditingOffset
+                showCustomReminderDialog = false
+                customReminderDialogEditingOffset = null
+                if (oldOffset == null) {
+                    onEvent(TodoEditEvent.AddCustomReminder(newOffsetMinutes))
+                } else {
+                    onEvent(TodoEditEvent.UpdateCustomReminder(oldOffset, newOffsetMinutes))
+                }
+            },
+        )
+    }
 }
 
 @Composable
 private fun ReminderSelection(
     timeAvailable: Boolean,
-    oneDay: Boolean,
     fifteenMinutes: Boolean,
+    oneHour: Boolean,
+    oneDay: Boolean,
+    customOffsets: List<Int>,
     enabled: Boolean,
-    onOneDayChanged: (Boolean) -> Unit,
-    onFifteenMinutesChanged: (Boolean) -> Unit,
+    onTogglePreset: (Int) -> Unit,
+    onRequestAddCustom: () -> Unit,
+    onRequestEditCustom: (Int) -> Unit,
+    onRemoveCustom: (Int) -> Unit,
 ) {
-    Column {
-        Text(stringResource(R.string.todo_reminder_label), style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = oneDay,
-                onCheckedChange = onOneDayChanged,
-                enabled = enabled && timeAvailable,
-                modifier = Modifier.testTag(ONE_DAY_REMINDER_TAG),
+    val controlsEnabled = enabled && timeAvailable
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = stringResource(R.string.todo_reminder_label),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ReminderPresetChip(
+                label = stringResource(R.string.reminder_fifteen_minutes_before),
+                selected = fifteenMinutes,
+                enabled = controlsEnabled,
+                onClick = { onTogglePreset(Reminder.FIFTEEN_MINUTES_BEFORE) },
+                testTag = FIFTEEN_MINUTE_REMINDER_TAG,
             )
-            Text(stringResource(R.string.reminder_one_day_before))
+            ReminderPresetChip(
+                label = stringResource(R.string.reminder_one_hour_before),
+                selected = oneHour,
+                enabled = controlsEnabled,
+                onClick = { onTogglePreset(Reminder.ONE_HOUR_BEFORE) },
+                testTag = ONE_HOUR_REMINDER_TAG,
+            )
+            ReminderPresetChip(
+                label = stringResource(R.string.reminder_one_day_before),
+                selected = oneDay,
+                enabled = controlsEnabled,
+                onClick = { onTogglePreset(Reminder.ONE_DAY_BEFORE) },
+                testTag = ONE_DAY_REMINDER_TAG,
+            )
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = fifteenMinutes,
-                onCheckedChange = onFifteenMinutesChanged,
-                enabled = enabled && timeAvailable,
-                modifier = Modifier.testTag(FIFTEEN_MINUTE_REMINDER_TAG),
-            )
-            Text(stringResource(R.string.reminder_fifteen_minutes_before))
+        if (customOffsets.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = stringResource(R.string.reminder_selected_custom_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                customOffsets.forEach { offsetMinutes ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(CUSTOM_REMINDER_ITEM_TAG_PREFIX + offsetMinutes),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = "• ${ReminderDurationFormatter.formatRelativeText(offsetMinutes)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(
+                            onClick = { onRequestEditCustom(offsetMinutes) },
+                            enabled = controlsEnabled,
+                            modifier = Modifier.testTag(CUSTOM_REMINDER_EDIT_TAG_PREFIX + offsetMinutes),
+                        ) {
+                            Text(stringResource(R.string.reminder_custom_edit))
+                        }
+                        TextButton(
+                            onClick = { onRemoveCustom(offsetMinutes) },
+                            enabled = controlsEnabled,
+                            modifier = Modifier.testTag(CUSTOM_REMINDER_DELETE_TAG_PREFIX + offsetMinutes),
+                        ) {
+                            Text(stringResource(R.string.reminder_custom_delete))
+                        }
+                    }
+                }
+            }
+        }
+        OutlinedButton(
+            onClick = onRequestAddCustom,
+            enabled = controlsEnabled,
+            modifier = Modifier.testTag(ADD_CUSTOM_REMINDER_TAG),
+        ) {
+            Text(stringResource(R.string.reminder_add_custom))
         }
         if (!timeAvailable) {
             Text(
@@ -253,6 +361,156 @@ private fun ReminderSelection(
             )
         }
     }
+}
+
+@Composable
+private fun ReminderPresetChip(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    testTag: String,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        enabled = enabled,
+        label = { Text(label) },
+        modifier = Modifier
+            .semantics { toggleableState = ToggleableState(selected) }
+            .testTag(testTag),
+    )
+}
+
+@Composable
+private fun CustomReminderDialog(
+    editingOffsetMinutes: Int?,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit,
+) {
+    val initialParts = remember(editingOffsetMinutes) {
+        editingOffsetMinutes?.takeIf { it > 0 }?.let(ReminderDurationFormatter::decompose)
+    }
+    var daysInput by remember(editingOffsetMinutes) {
+        mutableStateOf(initialParts?.days?.toString().orEmpty())
+    }
+    var hoursInput by remember(editingOffsetMinutes) {
+        mutableStateOf(initialParts?.hours?.toString().orEmpty())
+    }
+    var minutesInput by remember(editingOffsetMinutes) {
+        mutableStateOf(initialParts?.minutes?.toString().orEmpty())
+    }
+    var showValidationError by remember(editingOffsetMinutes) { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(
+                    if (editingOffsetMinutes == null) {
+                        R.string.reminder_custom_dialog_title_add
+                    } else {
+                        R.string.reminder_custom_dialog_title_edit
+                    },
+                ),
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = daysInput,
+                        onValueChange = {
+                            daysInput = it
+                            showValidationError = false
+                        },
+                        label = { Text(stringResource(R.string.reminder_custom_days_label)) },
+                        placeholder = { Text("0") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(CUSTOM_REMINDER_DAYS_INPUT_TAG),
+                    )
+                    OutlinedTextField(
+                        value = hoursInput,
+                        onValueChange = {
+                            hoursInput = it
+                            showValidationError = false
+                        },
+                        label = { Text(stringResource(R.string.reminder_custom_hours_label)) },
+                        placeholder = { Text("0") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(CUSTOM_REMINDER_HOURS_INPUT_TAG),
+                    )
+                    OutlinedTextField(
+                        value = minutesInput,
+                        onValueChange = {
+                            minutesInput = it
+                            showValidationError = false
+                        },
+                        label = { Text(stringResource(R.string.reminder_custom_minutes_label)) },
+                        placeholder = { Text("0") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(CUSTOM_REMINDER_MINUTES_INPUT_TAG),
+                    )
+                }
+                if (showValidationError) {
+                    Text(
+                        text = stringResource(R.string.reminder_custom_invalid),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testTag(CUSTOM_REMINDER_ERROR_TAG),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val parsed = ReminderDurationFormatter.parseCustomOffsetMinutes(
+                        daysInput = daysInput,
+                        hoursInput = hoursInput,
+                        minutesInput = minutesInput,
+                    )
+                    if (parsed == null) {
+                        showValidationError = true
+                    } else {
+                        onConfirm(parsed)
+                    }
+                },
+                modifier = Modifier.testTag(CUSTOM_REMINDER_CONFIRM_TAG),
+            ) {
+                Text(
+                    text = stringResource(
+                        if (editingOffsetMinutes == null) {
+                            R.string.reminder_custom_confirm_add
+                        } else {
+                            R.string.reminder_custom_confirm_edit
+                        },
+                    ),
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag(CUSTOM_REMINDER_CANCEL_TAG),
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+        modifier = Modifier.testTag(CUSTOM_REMINDER_DIALOG_TAG),
+    )
 }
 
 @Composable

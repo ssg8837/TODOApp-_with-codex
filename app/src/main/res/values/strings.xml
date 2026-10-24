@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ToDOApplication</string>
+    <string name="app_name">TODO</string>
     <string name="todo_list_title">TODO</string>
     <string name="previous_date">이전 날짜</string>
     <string name="next_date">다음 날짜</string>
@@ -82,7 +82,21 @@
     <string name="empty_filtered_todo_list">조건에 해당하는 TODO가 없습니다.</string>
     <string name="todo_reminder_label">알림</string>
     <string name="reminder_one_day_before">1일 전</string>
+    <string name="reminder_one_hour_before">1시간 전</string>
     <string name="reminder_fifteen_minutes_before">15분 전</string>
+    <string name="reminder_before_format">%1$s 전</string>
+    <string name="reminder_selected_custom_label">선택된 사용자 알림</string>
+    <string name="reminder_add_custom">+ 직접 설정</string>
+    <string name="reminder_custom_dialog_title_add">알림 시간 직접 설정</string>
+    <string name="reminder_custom_dialog_title_edit">사용자 알림 수정</string>
+    <string name="reminder_custom_days_label">일</string>
+    <string name="reminder_custom_hours_label">시간</string>
+    <string name="reminder_custom_minutes_label">분</string>
+    <string name="reminder_custom_confirm_add">추가</string>
+    <string name="reminder_custom_confirm_edit">저장</string>
+    <string name="reminder_custom_edit">수정</string>
+    <string name="reminder_custom_delete">삭제</string>
+    <string name="reminder_custom_invalid">1분 이상의 올바른 알림 시간을 입력해주세요.</string>
     <string name="reminder_requires_time">시간을 지정하면 알림을 선택할 수 있습니다.</string>
     <string name="notification_permission_denied_message">알림 권한이 없어 일정만 저장되었습니다. 알림을 받으려면 앱 설정에서 권한을 허용해주세요.</string>
     <string name="error_alarm_not_scheduled">일정은 저장되었지만 알림을 예약하지 못했습니다. 저장을 다시 눌러 재시도해주세요.</string>
@@ -91,6 +105,7 @@
     <string name="notification_channel_description">예정된 TODO의 사전 알림</string>
     <string name="notification_one_day_before">예정 시간 1일 전입니다.</string>
     <string name="notification_fifteen_minutes_before">예정 시간 15분 전입니다.</string>
+    <string name="notification_reminder_before">예정 시간 %1$s 전입니다.</string>
     <string name="todo_detail_title">TODO 확인</string>
     <string name="todo_confirm">확인</string>
     <string name="todo_edit">수정</string>

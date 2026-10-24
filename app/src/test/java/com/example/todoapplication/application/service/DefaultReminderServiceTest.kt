@@ -42,7 +42,7 @@ class DefaultReminderServiceTest {
         val reminderRepository = FakeReminderRepository()
         val service = DefaultReminderService(reminderRepository, FakeTodoRepository(listOf(todo())))
 
-        val result = service.create(Reminder(0, 1, 10))
+        val result = service.create(Reminder(0, 1, 0))
 
         assertEquals(
             ServiceResult.Failure(
@@ -53,6 +53,29 @@ class DefaultReminderServiceTest {
             result,
         )
         assertEquals(0, reminderRepository.writeCount)
+    }
+
+    @Test
+    fun customAndOneHourRemindersAreAcceptedAndDuplicatesAreRejected() = runBlocking {
+        val reminderRepository = FakeReminderRepository()
+        val service = DefaultReminderService(reminderRepository, FakeTodoRepository(listOf(todo())))
+
+        assertEquals(
+            ServiceResult.Success(Reminder(1, 1, Reminder.ONE_HOUR_BEFORE)),
+            service.create(Reminder(0, 1, Reminder.ONE_HOUR_BEFORE)),
+        )
+        assertEquals(
+            ServiceResult.Success(Reminder(2, 1, 150)),
+            service.create(Reminder(0, 1, 150)),
+        )
+        assertEquals(
+            ServiceResult.Failure(
+                ServiceError.InvalidReminder(
+                    setOf(ReminderValidationError.DUPLICATE_MINUTES_BEFORE),
+                ),
+            ),
+            service.create(Reminder(0, 1, 150)),
+        )
     }
 
     @Test

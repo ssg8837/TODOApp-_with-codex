@@ -8,6 +8,7 @@ import com.example.todoapplication.MainActivity
 import com.example.todoapplication.R
 import com.example.todoapplication.domain.model.Reminder
 import com.example.todoapplication.domain.model.Todo
+import com.example.todoapplication.domain.reminder.ReminderDurationFormatter
 
 /** Reminder Notification과 TODO 확인 화면으로 이동하는 content PendingIntent를 구성한다. */
 object NotificationFactory {
@@ -22,13 +23,8 @@ object NotificationFactory {
             },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val detail = context.getString(
-            if (reminder.minutesBefore == Reminder.ONE_DAY_BEFORE) {
-                R.string.notification_one_day_before
-            } else {
-                R.string.notification_fifteen_minutes_before
-            },
-        )
+        val durationText = ReminderDurationFormatter.formatDuration(reminder.minutesBefore)
+        val detail = context.getString(R.string.notification_reminder_before, durationText)
         return NotificationCompat.Builder(context, NotificationChannels.TODO_REMINDERS)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(todo.title)

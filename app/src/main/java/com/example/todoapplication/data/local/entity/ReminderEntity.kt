@@ -22,7 +22,10 @@ import androidx.room.PrimaryKey
             onUpdate = ForeignKey.NO_ACTION,
         ),
     ],
-    indices = [Index(value = ["todo_id"])],
+    indices = [
+        Index(value = ["todo_id"]),
+        Index(value = ["todo_id", "minutes_before"], unique = true),
+    ],
 )
 data class ReminderEntity(
     @PrimaryKey(autoGenerate = true)

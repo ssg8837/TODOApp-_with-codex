@@ -1,6 +1,7 @@
 package com.example.todoapplication.feature.todo.edit
 
 import com.example.todoapplication.domain.model.CategoryColor
+import com.example.todoapplication.domain.model.Reminder
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -8,6 +9,7 @@ import java.time.LocalTime
  * TODO 편집 화면의 지속 상태.
  *
  * [todoId]는 신규 모드에서 `null`이고 [time]이 `null`이면 Reminder 선택이 비활성화된다.
+ * [selectedReminderOffsets]는 프리셋과 사용자 지정 알림을 포함한 분 단위 offset 집합이며,
  * [isSaving]과 [isDeleting]은 동일 작업의 중복 요청을 막는 진행 상태다.
  */
 data class TodoEditUiState(
@@ -24,10 +26,26 @@ data class TodoEditUiState(
     val isDeleting: Boolean = false,
     val validationErrors: Set<TodoEditValidationError> = emptySet(),
     val error: TodoEditError? = null,
-    val remindOneDayBefore: Boolean = false,
-    val remindFifteenMinutesBefore: Boolean = false,
+    val selectedReminderOffsets: Set<Int> = emptySet(),
     val notificationPermissionDenied: Boolean = false,
-)
+) {
+    val remindFifteenMinutesBefore: Boolean
+        get() = Reminder.FIFTEEN_MINUTES_BEFORE in selectedReminderOffsets
+
+    val remindOneHourBefore: Boolean
+        get() = Reminder.ONE_HOUR_BEFORE in selectedReminderOffsets
+
+    val remindOneDayBefore: Boolean
+        get() = Reminder.ONE_DAY_BEFORE in selectedReminderOffsets
+
+    /** 프리셋(15분, 1시간, 1일)을 제외한 사용자 지정 알림 offset 목록 (먼 시점 -> 가까운 시점 내림차순). */
+    val customReminderOffsets: List<Int>
+        get() = (selectedReminderOffsets - Reminder.PRESET_MINUTES_BEFORE).sortedDescending()
+
+    /** 전체 선택된 알림 offset 목록 (먼 시점 -> 가까운 시점 내림차순). */
+    val sortedReminderOffsets: List<Int>
+        get() = selectedReminderOffsets.sortedDescending()
+}
 
 /** TODO 편집 화면의 신규 등록 또는 기존 항목 수정 모드. */
 enum class TodoEditMode {

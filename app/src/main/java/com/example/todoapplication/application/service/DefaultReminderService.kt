@@ -3,10 +3,12 @@ package com.example.todoapplication.application.service
 import com.example.todoapplication.domain.model.Reminder
 import com.example.todoapplication.domain.repository.ReminderRepository
 import com.example.todoapplication.domain.repository.TodoRepository
+import com.example.todoapplication.domain.validation.ReminderValidationError
 import com.example.todoapplication.domain.validation.ReminderValidator
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * Reminder Validator와 TODO 상태를 조합해 Reminder 유스케이스를 수행한다.
@@ -20,6 +22,12 @@ class DefaultReminderService(
 ) : ReminderService {
     override suspend fun create(reminder: Reminder): ServiceResult<Reminder> = serviceCall {
         validateAndFindTodo(reminder)?.let { return@serviceCall ServiceResult.Failure(it) }
+        val existing = reminderRepository.observeByTodoId(reminder.todoId).first()
+        if (existing.any { it.minutesBefore == reminder.minutesBefore }) {
+            return@serviceCall ServiceResult.Failure(
+                ServiceError.InvalidReminder(setOf(ReminderValidationError.DUPLICATE_MINUTES_BEFORE)),
+            )
+        }
         ServiceResult.Success(reminderRepository.create(reminder))
     }
 
@@ -41,13 +49,11 @@ class DefaultReminderService(
         if (todo.time == null && reminders.isNotEmpty()) {
             return@serviceCall ServiceResult.Failure(ServiceError.ReminderRequiresTodoTime)
         }
-        reminders.forEach { reminder ->
-            val errors = ReminderValidator.validate(reminder, expectedTodoId = todoId)
-            if (errors.isNotEmpty()) {
-                return@serviceCall ServiceResult.Failure(
-                    ServiceError.InvalidReminder(errors),
-                )
-            }
+        val errors = ReminderValidator.validateAll(reminders, expectedTodoId = todoId)
+        if (errors.isNotEmpty()) {
+            return@serviceCall ServiceResult.Failure(
+                ServiceError.InvalidReminder(errors),
+            )
         }
 
         ServiceResult.Success(reminderRepository.replaceReminders(todoId, reminders))

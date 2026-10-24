@@ -5,6 +5,17 @@ import java.time.LocalTime
 
 /** TODO 편집 화면에서 Presenter가 처리하는 사용자 의도. */
 sealed interface TodoEditEvent {
+    data class ToggleReminder(val offsetMinutes: Int) : TodoEditEvent
+
+    data class AddCustomReminder(val offsetMinutes: Int) : TodoEditEvent
+
+    data class UpdateCustomReminder(
+        val oldOffsetMinutes: Int,
+        val newOffsetMinutes: Int,
+    ) : TodoEditEvent
+
+    data class RemoveReminder(val offsetMinutes: Int) : TodoEditEvent
+
     data class SetOneDayReminder(val enabled: Boolean) : TodoEditEvent
 
     data class SetFifteenMinuteReminder(val enabled: Boolean) : TodoEditEvent

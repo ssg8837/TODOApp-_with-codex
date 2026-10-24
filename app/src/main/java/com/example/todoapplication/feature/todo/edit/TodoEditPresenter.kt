@@ -9,6 +9,7 @@ import com.example.todoapplication.application.service.TodoService
 import com.example.todoapplication.domain.model.Category
 import com.example.todoapplication.domain.model.Todo
 import com.example.todoapplication.domain.model.Reminder
+import com.example.todoapplication.domain.validation.ReminderValidator
 import com.example.todoapplication.domain.validation.TodoValidationError
 import java.time.Clock
 import java.time.Instant
@@ -68,6 +69,11 @@ class TodoEditPresenter(
     /** 편집 입력과 저장·삭제 확인 이벤트를 상태 또는 Service 유스케이스로 변환한다. */
     fun onEvent(event: TodoEditEvent) {
         when (event) {
+            is TodoEditEvent.ToggleReminder -> toggleReminder(event.offsetMinutes)
+            is TodoEditEvent.AddCustomReminder -> addCustomReminder(event.offsetMinutes)
+            is TodoEditEvent.UpdateCustomReminder ->
+                updateCustomReminder(event.oldOffsetMinutes, event.newOffsetMinutes)
+            is TodoEditEvent.RemoveReminder -> removeReminder(event.offsetMinutes)
             is TodoEditEvent.SetOneDayReminder -> setReminder(Reminder.ONE_DAY_BEFORE, event.enabled)
             is TodoEditEvent.SetFifteenMinuteReminder ->
                 setReminder(Reminder.FIFTEEN_MINUTES_BEFORE, event.enabled)
@@ -86,8 +92,7 @@ class TodoEditPresenter(
             TodoEditEvent.TimeCleared -> mutableState.update {
                 it.copy(
                     time = null,
-                    remindOneDayBefore = false,
-                    remindFifteenMinutesBefore = false,
+                    selectedReminderOffsets = emptySet(),
                 )
             }
             is TodoEditEvent.CategoryChanged -> mutableState.update {
@@ -178,11 +183,13 @@ class TodoEditPresenter(
                 when (result) {
                     is ServiceResult.Success -> {
                         remindersLoaded = true
-                        val minutes = result.value.map(Reminder::minutesBefore).toSet()
+                        val minutes = result.value
+                            .map(Reminder::minutesBefore)
+                            .filter(ReminderValidator::isValidOffset)
+                            .toSet()
                         mutableState.update {
                             it.copy(
-                                remindOneDayBefore = Reminder.ONE_DAY_BEFORE in minutes,
-                                remindFifteenMinutesBefore = Reminder.FIFTEEN_MINUTES_BEFORE in minutes,
+                                selectedReminderOffsets = minutes,
                                 isLoading = !(categoriesLoaded && todoLoaded && remindersLoaded),
                             )
                         }
@@ -195,14 +202,59 @@ class TodoEditPresenter(
         }
     }
 
-    private fun setReminder(minutesBefore: Int, enabled: Boolean) {
-        if (mutableState.value.time == null || mutableState.value.isSaving) return
-        mutableState.update {
-            when (minutesBefore) {
-                Reminder.ONE_DAY_BEFORE -> it.copy(remindOneDayBefore = enabled)
-                Reminder.FIFTEEN_MINUTES_BEFORE -> it.copy(remindFifteenMinutesBefore = enabled)
-                else -> it
+    private fun toggleReminder(offsetMinutes: Int) {
+        val current = mutableState.value
+        if (current.time == null || current.isSaving || current.isDeleting) return
+        if (!ReminderValidator.isValidOffset(offsetMinutes)) return
+        mutableState.update { state ->
+            val updated = if (offsetMinutes in state.selectedReminderOffsets) {
+                state.selectedReminderOffsets - offsetMinutes
+            } else {
+                state.selectedReminderOffsets + offsetMinutes
             }
+            state.copy(selectedReminderOffsets = updated)
+        }
+    }
+
+    private fun addCustomReminder(offsetMinutes: Int) {
+        val current = mutableState.value
+        if (current.time == null || current.isSaving || current.isDeleting) return
+        if (!ReminderValidator.isValidOffset(offsetMinutes)) return
+        mutableState.update { state ->
+            state.copy(selectedReminderOffsets = state.selectedReminderOffsets + offsetMinutes)
+        }
+    }
+
+    private fun updateCustomReminder(oldOffsetMinutes: Int, newOffsetMinutes: Int) {
+        val current = mutableState.value
+        if (current.time == null || current.isSaving || current.isDeleting) return
+        if (!ReminderValidator.isValidOffset(newOffsetMinutes)) return
+        mutableState.update { state ->
+            state.copy(
+                selectedReminderOffsets = (state.selectedReminderOffsets - oldOffsetMinutes) + newOffsetMinutes,
+            )
+        }
+    }
+
+    private fun removeReminder(offsetMinutes: Int) {
+        val current = mutableState.value
+        if (current.isSaving || current.isDeleting) return
+        mutableState.update { state ->
+            state.copy(selectedReminderOffsets = state.selectedReminderOffsets - offsetMinutes)
+        }
+    }
+
+    private fun setReminder(minutesBefore: Int, enabled: Boolean) {
+        val current = mutableState.value
+        if (current.time == null || current.isSaving || current.isDeleting) return
+        if (!ReminderValidator.isValidOffset(minutesBefore)) return
+        mutableState.update { state ->
+            val updated = if (enabled) {
+                state.selectedReminderOffsets + minutesBefore
+            } else {
+                state.selectedReminderOffsets - minutesBefore
+            }
+            state.copy(selectedReminderOffsets = updated)
         }
     }
 
@@ -246,9 +298,10 @@ class TodoEditPresenter(
                     updatedAt = now,
                 )
             }
-            val reminderMinutes = buildSet {
-                if (current.remindOneDayBefore) add(Reminder.ONE_DAY_BEFORE)
-                if (current.remindFifteenMinutesBefore) add(Reminder.FIFTEEN_MINUTES_BEFORE)
+            val reminderMinutes = if (current.time != null) {
+                current.selectedReminderOffsets.filter(ReminderValidator::isValidOffset).toSet()
+            } else {
+                emptySet()
             }
             val result = todoService.saveWithReminders(todo, reminderMinutes)
             applySaveResult(result)

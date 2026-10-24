@@ -161,16 +161,17 @@ class TodoDetailPresenterTest {
         assertEquals("일반", presenter.state.value.categoryName)
         assertEquals(CategoryColor.NEUTRAL, presenter.state.value.categoryColor)
 
-        // 2. Reminder 변경 반영
+        // 2. Reminder 변경 반영 (내림차순: 먼 시점 -> 가까운 시점)
         val updatedReminders = listOf(
             Reminder(id = 10L, todoId = 1L, minutesBefore = Reminder.FIFTEEN_MINUTES_BEFORE),
+            Reminder(id = 12L, todoId = 1L, minutesBefore = 150),
             Reminder(id = 11L, todoId = 1L, minutesBefore = Reminder.ONE_DAY_BEFORE),
         )
         reminderFlow.value = ServiceResult.Success(updatedReminders)
         advanceUntilIdle()
 
         assertEquals(
-            listOf(Reminder.FIFTEEN_MINUTES_BEFORE, Reminder.ONE_DAY_BEFORE),
+            listOf(Reminder.ONE_DAY_BEFORE, 150, Reminder.FIFTEEN_MINUTES_BEFORE),
             presenter.state.value.reminders,
         )
 

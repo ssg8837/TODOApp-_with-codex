@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsOff
@@ -17,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.todoapplication.domain.model.CategoryColor
+import com.example.todoapplication.domain.model.Reminder
 import com.example.todoapplication.ui.theme.ToDOApplicationTheme
 import java.time.LocalDate
 import java.time.LocalTime
@@ -55,37 +57,116 @@ class TodoEditScreenTest {
         val events = mutableListOf<TodoEditEvent>()
         setScreen(state(time = LocalTime.NOON), events::add)
 
-        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsEnabled().assertIsOff().performClick()
         composeRule.onNodeWithTag(FIFTEEN_MINUTE_REMINDER_TAG).assertIsEnabled().assertIsOff().performClick()
+        composeRule.onNodeWithTag(ONE_HOUR_REMINDER_TAG).assertIsEnabled().assertIsOff().performClick()
+        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsEnabled().assertIsOff().performClick()
 
         composeRule.runOnIdle {
-            assertTrue(TodoEditEvent.SetOneDayReminder(true) in events)
-            assertTrue(TodoEditEvent.SetFifteenMinuteReminder(true) in events)
+            assertTrue(TodoEditEvent.ToggleReminder(Reminder.FIFTEEN_MINUTES_BEFORE) in events)
+            assertTrue(TodoEditEvent.ToggleReminder(Reminder.ONE_HOUR_BEFORE) in events)
+            assertTrue(TodoEditEvent.ToggleReminder(Reminder.ONE_DAY_BEFORE) in events)
         }
-
     }
 
     @Test
     fun reminderOptionsAreDisabledWithoutTime() {
         setScreen(state(time = null))
 
-        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsNotEnabled()
         composeRule.onNodeWithTag(FIFTEEN_MINUTE_REMINDER_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(ONE_HOUR_REMINDER_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsNotEnabled()
+        composeRule.onNodeWithTag(ADD_CUSTOM_REMINDER_TAG).assertIsNotEnabled()
     }
 
     @Test
-    fun editScreenShowsPersistedReminderSelections() {
+    fun editScreenShowsPersistedPresetAndCustomReminderSelections() {
         setScreen(
             state(
                 mode = TodoEditMode.EDIT,
                 time = LocalTime.NOON,
-                remindOneDayBefore = true,
-                remindFifteenMinutesBefore = true,
+                selectedReminderOffsets = setOf(
+                    Reminder.FIFTEEN_MINUTES_BEFORE,
+                    Reminder.ONE_HOUR_BEFORE,
+                    Reminder.ONE_DAY_BEFORE,
+                    150,
+                    4_320,
+                ),
             ),
         )
 
-        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsOn()
         composeRule.onNodeWithTag(FIFTEEN_MINUTE_REMINDER_TAG).assertIsOn()
+        composeRule.onNodeWithTag(ONE_HOUR_REMINDER_TAG).assertIsOn()
+        composeRule.onNodeWithTag(ONE_DAY_REMINDER_TAG).assertIsOn()
+        composeRule.onNodeWithText("• 3일 전").assertIsDisplayed()
+        composeRule.onNodeWithText("• 2시간 30분 전").assertIsDisplayed()
+    }
+
+    @Test
+    fun customReminderDialogValidatesAddsEditsAndDeletesCustomReminders() {
+        val events = mutableListOf<TodoEditEvent>()
+        var currentState by mutableStateOf(
+            state(
+                mode = TodoEditMode.EDIT,
+                time = LocalTime.NOON,
+                selectedReminderOffsets = setOf(150),
+            ),
+        )
+        composeRule.setContent {
+            ToDOApplicationTheme {
+                TodoEditScreen(
+                    state = currentState,
+                    onEvent = { event ->
+                        events += event
+                        currentState = when (event) {
+                            is TodoEditEvent.AddCustomReminder ->
+                                currentState.copy(
+                                    selectedReminderOffsets = currentState.selectedReminderOffsets + event.offsetMinutes,
+                                )
+                            is TodoEditEvent.UpdateCustomReminder ->
+                                currentState.copy(
+                                    selectedReminderOffsets = (currentState.selectedReminderOffsets - event.oldOffsetMinutes) + event.newOffsetMinutes,
+                                )
+                            is TodoEditEvent.RemoveReminder ->
+                                currentState.copy(
+                                    selectedReminderOffsets = currentState.selectedReminderOffsets - event.offsetMinutes,
+                                )
+                            else -> currentState
+                        }
+                    },
+                    onBack = {},
+                )
+            }
+        }
+
+        // 1. 직접 설정 다이얼로그 열기 후 0 입력 시 검증 오류 확인
+        composeRule.onNodeWithTag(ADD_CUSTOM_REMINDER_TAG).performClick()
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_DIALOG_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_CONFIRM_TAG).performClick()
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_ERROR_TAG).assertIsDisplayed()
+
+        // 2. 3일(4320분) 입력 후 추가
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_DAYS_INPUT_TAG).performTextInput("3")
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_CONFIRM_TAG).performClick()
+        composeRule.onNodeWithText("• 3일 전").assertIsDisplayed()
+
+        // 3. 기존 2시간 30분(150분) 알림을 1시간 45분(105분)으로 수정
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_EDIT_TAG_PREFIX + 150).performClick()
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_HOURS_INPUT_TAG).performTextClearance()
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_HOURS_INPUT_TAG).performTextInput("1")
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_MINUTES_INPUT_TAG).performTextClearance()
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_MINUTES_INPUT_TAG).performTextInput("45")
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_CONFIRM_TAG).performClick()
+        composeRule.onNodeWithText("• 1시간 45분 전").assertIsDisplayed()
+
+        // 4. 3일 전(4320분) 삭제
+        composeRule.onNodeWithTag(CUSTOM_REMINDER_DELETE_TAG_PREFIX + 4_320).performClick()
+        composeRule.onAllNodesWithTag(CUSTOM_REMINDER_ITEM_TAG_PREFIX + 4_320).assertCountEquals(0)
+
+        composeRule.runOnIdle {
+            assertTrue(TodoEditEvent.AddCustomReminder(4_320) in events)
+            assertTrue(TodoEditEvent.UpdateCustomReminder(150, 105) in events)
+            assertTrue(TodoEditEvent.RemoveReminder(4_320) in events)
+        }
     }
 
     @Test
@@ -252,8 +333,7 @@ class TodoEditScreenTest {
         showDeleteConfirmation: Boolean = false,
         isDeleting: Boolean = false,
         validationErrors: Set<TodoEditValidationError> = emptySet(),
-        remindOneDayBefore: Boolean = false,
-        remindFifteenMinutesBefore: Boolean = false,
+        selectedReminderOffsets: Set<Int> = emptySet(),
     ) = TodoEditUiState(
         mode = mode,
         todoId = if (mode == TodoEditMode.EDIT) 10 else null,
@@ -270,7 +350,6 @@ class TodoEditScreenTest {
         showDeleteConfirmation = showDeleteConfirmation,
         isDeleting = isDeleting,
         validationErrors = validationErrors,
-        remindOneDayBefore = remindOneDayBefore,
-        remindFifteenMinutesBefore = remindFifteenMinutesBefore,
+        selectedReminderOffsets = selectedReminderOffsets,
     )
 }

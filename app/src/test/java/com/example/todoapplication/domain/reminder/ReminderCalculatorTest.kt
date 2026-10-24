@@ -12,17 +12,40 @@ import org.junit.Test
 
 class ReminderCalculatorTest {
     @Test
-    fun calculatesBothSupportedOffsetsFromTodoLocalDateTime() {
+    fun calculatesPresetAndCustomOffsetsFromTodoLocalDateTime() {
         val todo = todo(LocalDate.of(2026, 9, 20), LocalTime.of(12, 0))
         val zone = ZoneId.of("Asia/Seoul")
 
         assertEquals(
+            Instant.parse("2026-09-17T03:00:00Z"),
+            ReminderCalculator.scheduledAt(todo, reminder(1, 4_320), zone),
+        )
+        assertEquals(
             Instant.parse("2026-09-19T03:00:00Z"),
-            ReminderCalculator.scheduledAt(todo, reminder(1, Reminder.ONE_DAY_BEFORE), zone),
+            ReminderCalculator.scheduledAt(todo, reminder(2, Reminder.ONE_DAY_BEFORE), zone),
+        )
+        assertEquals(
+            Instant.parse("2026-09-20T00:30:00Z"),
+            ReminderCalculator.scheduledAt(todo, reminder(3, 150), zone),
+        )
+        assertEquals(
+            Instant.parse("2026-09-20T02:00:00Z"),
+            ReminderCalculator.scheduledAt(todo, reminder(4, Reminder.ONE_HOUR_BEFORE), zone),
         )
         assertEquals(
             Instant.parse("2026-09-20T02:45:00Z"),
-            ReminderCalculator.scheduledAt(todo, reminder(2, Reminder.FIFTEEN_MINUTES_BEFORE), zone),
+            ReminderCalculator.scheduledAt(todo, reminder(5, Reminder.FIFTEEN_MINUTES_BEFORE), zone),
+        )
+    }
+
+    @Test
+    fun calculatesAcrossPreviousDayBoundary() {
+        val todo = todo(LocalDate.of(2026, 9, 20), LocalTime.of(1, 0))
+        val zone = ZoneId.of("UTC")
+
+        assertEquals(
+            Instant.parse("2026-09-19T23:00:00Z"),
+            ReminderCalculator.scheduledAt(todo, reminder(1, 120), zone),
         )
     }
 

@@ -50,18 +50,18 @@ class ReminderAlarmIntegrationTest {
 
             val created = (service.saveWithReminders(
                 input,
-                setOf(Reminder.ONE_DAY_BEFORE, Reminder.FIFTEEN_MINUTES_BEFORE),
+                setOf(Reminder.ONE_DAY_BEFORE, 150, Reminder.ONE_HOUR_BEFORE, Reminder.FIFTEEN_MINUTES_BEFORE),
             ) as ServiceResult.Success<TodoSaveResult>).value.todo
             val originalReminders = reminders.observeByTodoId(created.id).first()
-            assertEquals(2, originalReminders.size)
-            assertEquals(2, scheduler.scheduled.size)
+            assertEquals(listOf(15, 60, 150, 1_440), originalReminders.map { it.minutesBefore })
+            assertEquals(4, scheduler.scheduled.size)
 
             service.saveWithReminders(
                 created.copy(time = LocalTime.of(13, 0)),
-                setOf(Reminder.FIFTEEN_MINUTES_BEFORE),
+                setOf(180, Reminder.FIFTEEN_MINUTES_BEFORE),
             )
             assertTrue(scheduler.cancelled.containsAll(originalReminders))
-            assertEquals(1, reminders.observeByTodoId(created.id).first().size)
+            assertEquals(listOf(15, 180), reminders.observeByTodoId(created.id).first().map { it.minutesBefore })
 
             val cancelCount = scheduler.cancelled.size
             service.setCompleted(created.id, true)

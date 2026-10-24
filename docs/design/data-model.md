@@ -35,7 +35,8 @@ Category
 Reminder
 - id: Long
 - todoId: Long
-- minutesBefore: 15 또는 1440, 확장 가능
+- minutesBefore: Int (> 0, 기본 프리셋 15 / 60 / 1440 및 사용자 지정 양수 분 단위 offset)
+- UNIQUE(todoId, minutesBefore)
 ```
 
 ## Category 정책
@@ -135,7 +136,8 @@ Reminder 교체 transaction에서 신규 항목 하나라도 저장에 실패하
 
 ## Room version과 Migration
 
-- 초기 Database version은 `1`이다.
+- 초기 Database version은 `1`이며, Phase 16에서 동일 TODO 내 중복 알림 offset 방지를 위한 `index_reminders_todo_id_minutes_before` 고유 인덱스 추가로 version `2`로 확장되었다.
+- `MIGRATION_1_2`는 기존 Reminder 행(`id`, `todo_id`, `minutes_before`)을 보존한 채 중복 정리 후 고유 인덱스를 생성한다.
 - schema version을 올릴 때 명시적인 `Migration`을 작성한다.
 - `fallbackToDestructiveMigration` 계열을 기본 정책으로 사용하지 않는다.
 - 개발 중 DB 초기화가 필요하면 앱 데이터를 명시적으로 삭제한다.

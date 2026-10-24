@@ -37,7 +37,7 @@ class TodoDetailScreenTest {
             categoryName = "건강",
             categoryColor = CategoryColor.GREEN,
             isCompleted = false,
-            reminders = listOf(Reminder.ONE_DAY_BEFORE, Reminder.FIFTEEN_MINUTES_BEFORE),
+            reminders = listOf(Reminder.ONE_DAY_BEFORE, 150, Reminder.ONE_HOUR_BEFORE, Reminder.FIFTEEN_MINUTES_BEFORE),
             isLoading = false,
             error = null,
         )
@@ -60,6 +60,8 @@ class TodoDetailScreenTest {
         composeRule.onNodeWithText("건강").assertIsDisplayed()
         composeRule.onNodeWithText("미완료").assertIsDisplayed()
         composeRule.onNodeWithText("- 1일 전").assertIsDisplayed()
+        composeRule.onNodeWithText("- 2시간 30분 전").assertIsDisplayed()
+        composeRule.onNodeWithText("- 1시간 전").assertIsDisplayed()
         composeRule.onNodeWithText("- 15분 전").assertIsDisplayed()
 
         // 수정 버튼 클릭

@@ -7,6 +7,8 @@ import com.example.todoapplication.domain.repository.TodoRepository
 import com.example.todoapplication.domain.repository.ReminderRepository
 import com.example.todoapplication.notification.AlarmOperationResult
 import com.example.todoapplication.notification.AlarmScheduler
+import com.example.todoapplication.domain.validation.ReminderValidationError
+import com.example.todoapplication.domain.validation.ReminderValidator
 import com.example.todoapplication.domain.validation.TodoValidator
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -70,8 +72,12 @@ class DefaultTodoService(
         if (todo.time == null && reminderMinutesBefore.isNotEmpty()) {
             return@serviceCall ServiceResult.Failure(ServiceError.ReminderRequiresTodoTime)
         }
-        if (!Reminder.SUPPORTED_MINUTES_BEFORE.containsAll(reminderMinutesBefore)) {
-            return@serviceCall ServiceResult.Failure(ServiceError.InvalidReminder(emptySet()))
+        if (reminderMinutesBefore.any { !ReminderValidator.isValidOffset(it) }) {
+            return@serviceCall ServiceResult.Failure(
+                ServiceError.InvalidReminder(
+                    setOf(ReminderValidationError.UNSUPPORTED_MINUTES_BEFORE),
+                ),
+            )
         }
 
         val oldReminders = if (todo.id > 0) reminderStore.observeByTodoId(todo.id).first() else emptyList()

@@ -34,7 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.todoapplication.R
-import com.example.todoapplication.domain.model.Reminder
+import com.example.todoapplication.domain.reminder.ReminderDurationFormatter
 import com.example.todoapplication.ui.theme.toComposeColor
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -255,11 +255,10 @@ private fun DetailContent(
                     )
                 } else {
                     state.reminders.forEach { minutes ->
-                        val reminderText = when (minutes) {
-                            Reminder.ONE_DAY_BEFORE -> stringResource(R.string.reminder_one_day_before)
-                            Reminder.FIFTEEN_MINUTES_BEFORE -> stringResource(R.string.reminder_fifteen_minutes_before)
-                            else -> "$minutes"
-                        }
+                        val reminderText = stringResource(
+                            R.string.reminder_before_format,
+                            ReminderDurationFormatter.formatDuration(minutes),
+                        )
                         Text(
                             text = "- $reminderText",
                             style = MaterialTheme.typography.bodyLarge,

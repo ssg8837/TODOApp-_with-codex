@@ -10,7 +10,9 @@ import com.example.todoapplication.notification.AlarmScheduler
 import com.example.todoapplication.domain.validation.TodoValidator
 import java.time.LocalDate
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 
 /**
  * TODO validation과 Category 유효성, Reminder 저장 및 Alarm 동기화를 조정한다.
@@ -141,6 +143,17 @@ class DefaultTodoService(
             ?: return@serviceCall ServiceResult.Failure(ServiceError.TodoNotFound)
         ServiceResult.Success(todo)
     }
+
+    override fun observeById(todoId: Long): Flow<ServiceResult<Todo>> =
+        todoRepository.observeById(todoId)
+            .map { todo ->
+                if (todo != null) {
+                    ServiceResult.Success(todo)
+                } else {
+                    ServiceResult.Failure(ServiceError.TodoNotFound)
+                }
+            }
+            .catch { emit(ServiceResult.Failure(ServiceError.PersistenceFailure)) }
 
     override fun observeByDate(date: LocalDate): Flow<ServiceResult<List<Todo>>> =
         todoRepository.observeByDate(date).asServiceResult()

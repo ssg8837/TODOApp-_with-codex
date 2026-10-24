@@ -7,15 +7,16 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.todoapplication.feature.todo.edit.TodoEditMode
 import com.example.todoapplication.feature.category.CategoryManagementRoute
+import com.example.todoapplication.feature.todo.detail.TodoDetailRoute
+import com.example.todoapplication.feature.todo.edit.TodoEditMode
 import com.example.todoapplication.feature.todo.edit.TodoEditRoute
 import com.example.todoapplication.feature.todo.list.TodoListRoute
 import java.time.LocalDate
 
 /**
- * 목록·Category 관리·TODO 신규/수정 destination을 구성한다.
- * Notification 진입의 [initialTodoId]는 ID만 사용해 수정 화면으로 이동한다.
+ * 목록·확인·Category 관리·TODO 신규/수정 destination을 구성한다.
+ * Notification 진입의 [initialTodoId]는 ID만 사용해 확인(Detail) 화면으로 이동한다.
  */
 @Composable
 fun TodoNavHost(
@@ -29,12 +30,27 @@ fun TodoNavHost(
         composable(TodoDestination.LIST) {
             TodoListRoute(
                 onAddTodo = { date -> navController.navigate(TodoDestination.newTodo(date)) },
-                onEditTodo = { todoId -> navController.navigate(TodoDestination.editTodo(todoId)) },
+                onSelectTodo = { todoId -> navController.navigate(TodoDestination.detailTodo(todoId)) },
                 onManageCategories = { navController.navigate(TodoDestination.CATEGORY_MANAGEMENT) },
             )
         }
         composable(TodoDestination.CATEGORY_MANAGEMENT) {
             CategoryManagementRoute(onBack = navController::popBackStack)
+        }
+        composable(
+            route = TodoDestination.DETAIL_PATTERN,
+            arguments = listOf(
+                navArgument(TodoDestination.TODO_ID_ARGUMENT) { type = NavType.LongType },
+            ),
+        ) { entry ->
+            val todoId = entry.arguments?.getLong(TodoDestination.TODO_ID_ARGUMENT)
+                ?: return@composable
+            TodoDetailRoute(
+                todoId = todoId,
+                onBack = navController::popBackStack,
+                onEdit = { id -> navController.navigate(TodoDestination.editTodo(id)) },
+                onConfirm = navController::popBackStack,
+            )
         }
         composable(
             route = TodoDestination.NEW_PATTERN,
@@ -68,13 +84,15 @@ fun TodoNavHost(
                 todoId = todoId,
                 onBack = navController::popBackStack,
                 onSaved = navController::popBackStack,
-                onDeleted = navController::popBackStack,
+                onDeleted = {
+                    navController.popBackStack(TodoDestination.LIST, inclusive = false)
+                },
             )
         }
     }
     LaunchedEffect(initialTodoId) {
         initialTodoId?.takeIf { it > 0L }?.let { todoId ->
-            navController.navigate(TodoDestination.editTodo(todoId))
+            navController.navigate(TodoDestination.detailTodo(todoId))
         }
     }
 }

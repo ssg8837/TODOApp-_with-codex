@@ -35,6 +35,11 @@ internal class RoomTodoRepository(
         todoDao.getById(id)?.let(TodoMapper::toDomain)
     }
 
+    override fun observeById(id: Long): Flow<Todo?> =
+        todoDao.observeById(id)
+            .map { it?.let(TodoMapper::toDomain) }
+            .mapDataAccessErrors()
+
     override fun observeByDate(date: LocalDate): Flow<List<Todo>> =
         todoDao.observeByDate(date.toEpochDay())
             .map { entities -> entities.map(TodoMapper::toDomain) }

@@ -70,10 +70,17 @@ fun TodoListScreen(
     state: TodoListUiState,
     onEvent: (TodoListEvent) -> Unit,
     onAddTodo: () -> Unit = {},
-    onEditTodo: (Long) -> Unit = {},
+    onSelectTodo: (Long) -> Unit = {},
+    onEditTodo: (Long) -> Unit = onSelectTodo,
     onManageCategories: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val handleSelect: (Long) -> Unit = { id ->
+        onSelectTodo(id)
+        if (onEditTodo !== onSelectTodo) {
+            onEditTodo(id)
+        }
+    }
     var isDatePickerVisible by remember { mutableStateOf(false) }
     val addTodoDescription = stringResource(R.string.add_todo_description)
 
@@ -133,7 +140,7 @@ fun TodoListScreen(
                 onCompletedChange = { id, completed ->
                     onEvent(TodoListEvent.SetCompleted(id, completed))
                 },
-                onEditTodo = onEditTodo,
+                onSelectTodo = handleSelect,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -203,7 +210,7 @@ private fun TodoListContent(
     showEmptyState: Boolean,
     emptyState: TodoListEmptyState,
     onCompletedChange: (Long, Boolean) -> Unit,
-    onEditTodo: (Long) -> Unit,
+    onSelectTodo: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (todos.isEmpty()) {
@@ -227,7 +234,7 @@ private fun TodoListContent(
             TodoListItem(
                 todo = todo,
                 onCompletedChange = { completed -> onCompletedChange(todo.id, completed) },
-                onEdit = { onEditTodo(todo.id) },
+                onEdit = { onSelectTodo(todo.id) },
             )
             HorizontalDivider()
         }

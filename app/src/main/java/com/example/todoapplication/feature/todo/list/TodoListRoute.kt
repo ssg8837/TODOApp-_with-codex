@@ -16,8 +16,9 @@ import com.example.todoapplication.presenterfactory.TodoListPresenterFactory
 @Composable
 fun TodoListRoute(
     onAddTodo: (java.time.LocalDate) -> Unit,
-    onEditTodo: (Long) -> Unit,
+    onSelectTodo: (Long) -> Unit = {},
     onManageCategories: () -> Unit,
+    onEditTodo: (Long) -> Unit = onSelectTodo,
 ) {
     val application = LocalContext.current.applicationContext as TodoApplication
     val factory = remember(application.container) {
@@ -33,6 +34,7 @@ fun TodoListRoute(
         state = state,
         onEvent = presenter::onEvent,
         onAddTodo = { onAddTodo(state.selectedDate) },
+        onSelectTodo = onSelectTodo,
         onEditTodo = onEditTodo,
         onManageCategories = onManageCategories,
     )

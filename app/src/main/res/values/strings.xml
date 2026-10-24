@@ -91,4 +91,11 @@
     <string name="notification_channel_description">예정된 TODO의 사전 알림</string>
     <string name="notification_one_day_before">예정 시간 1일 전입니다.</string>
     <string name="notification_fifteen_minutes_before">예정 시간 15분 전입니다.</string>
+    <string name="todo_detail_title">TODO 확인</string>
+    <string name="todo_confirm">확인</string>
+    <string name="todo_edit">수정</string>
+    <string name="todo_no_reminder">알림 없음</string>
+    <string name="status_completed">완료</string>
+    <string name="status_incomplete">미완료</string>
+    <string name="todo_status_label">상태</string>
 </resources>

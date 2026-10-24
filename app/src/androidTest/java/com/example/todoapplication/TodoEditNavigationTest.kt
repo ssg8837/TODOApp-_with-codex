@@ -8,6 +8,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import com.example.todoapplication.feature.todo.detail.DETAIL_CONFIRM_BUTTON_TAG
+import com.example.todoapplication.feature.todo.detail.DETAIL_EDIT_BUTTON_TAG
 import com.example.todoapplication.feature.todo.edit.EDIT_TITLE_TAG
 import com.example.todoapplication.feature.todo.edit.EDIT_DATE_TAG
 import com.example.todoapplication.feature.todo.edit.EDIT_TIME_TAG
@@ -51,11 +53,22 @@ class TodoEditNavigationTest {
         )
 
         composeRule.onNodeWithText(initialTitle).performClick()
+        composeRule.onNodeWithText("TODO 확인").assertIsDisplayed()
+        composeRule.onNodeWithTag(DETAIL_EDIT_BUTTON_TAG).performClick()
         composeRule.onNodeWithText("TODO 수정").assertIsDisplayed()
         composeRule.onNodeWithTag(EDIT_TITLE_TAG).performTextClearance()
         composeRule.onNodeWithTag(EDIT_TITLE_TAG).performTextInput(updatedTitle)
         composeRule.onNodeWithTag(SAVE_TODO_TAG).performClick()
 
+        // 수정 저장 후 Detail로 복귀
+        composeRule.waitUntilAtLeastOneExists(
+            androidx.compose.ui.test.hasText("TODO 확인"),
+            timeoutMillis = 5_000,
+        )
+        composeRule.onNodeWithText(updatedTitle).assertIsDisplayed()
+
+        // 확인 버튼 클릭 시 목록으로 복귀
+        composeRule.onNodeWithTag(DETAIL_CONFIRM_BUTTON_TAG).performClick()
         composeRule.waitUntilAtLeastOneExists(
             androidx.compose.ui.test.hasText(updatedTitle),
             timeoutMillis = 5_000,
@@ -82,6 +95,8 @@ class TodoEditNavigationTest {
         )
 
         composeRule.onNodeWithText(title).performClick()
+        composeRule.onNodeWithText("TODO 확인").assertIsDisplayed()
+        composeRule.onNodeWithTag(DETAIL_EDIT_BUTTON_TAG).performClick()
         composeRule.onNodeWithText("TODO 수정").assertIsDisplayed()
         composeRule.onNodeWithTag(DELETE_TODO_TAG).performClick()
         composeRule.onNodeWithTag(DELETE_DIALOG_TAG).assertIsDisplayed()

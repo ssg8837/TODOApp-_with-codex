@@ -11,11 +11,21 @@
 - Category 드롭다운은 전체를 첫 번째에 표시한다. 완료 여부는 전체/미완료 선택 상태를 접근성 semantics와 함께 제공한다.
 - 날짜 이동은 기존 필터를 유지한다. 선택 Category 삭제 시 전체로 초기화하며 필터 상태는 앱 재실행 간 저장하지 않는다.
 - Category 필터는 `일반`을 최상단에 두고 저장된 사용자 Category 순서를 사용한다.
-- TODO 추가, 수정 및 종류 관리 화면으로 이동한다.
+- TODO 추가, 확인(Detail) 및 종류 관리 화면으로 이동한다.
 - 날짜에 데이터가 없을 때와 필터 결과가 없을 때를 구분한다.
 - 시간 있는 TODO를 시간 오름차순으로 먼저 표시하고, 무시간 TODO를 뒤에 표시한다. 같은 시간은 생성순 오름차순이며 완료 여부는 순서에 영향을 주지 않는다.
 
 예상 상태: `selectedDate`, `todos`, `categories`, `selectedCategoryId`, `incompleteOnly`, `isLoading`, `errorMessage`.
+
+## TodoDetail
+
+- TODO 확인 전용 읽기 화면으로, 제목, 날짜, 시간, Category 이름 및 색상, 완료 여부, Reminder 설정을 표시한다.
+- 화면 내에서 데이터를 직접 편집/삭제하거나 완료 상태를 직접 변경하지 않는다.
+- 최신 DB 상태를 실시간 Flow로 반영하며, Category 삭제 시 `일반`으로 자동 갱신된다.
+- 하단 [수정] 버튼으로 `TodoEdit` 화면으로 이동하고, [확인] 버튼으로 이전 화면(목록 등)으로 돌아간다.
+- 존재하지 않거나 삭제된 TODO ID 접근 시 오류 메시지를 안내하고 안전하게 화면을 닫을 수 있도록 한다.
+
+예상 상태: `todoId`, `title`, `date`, `time`, `categoryName`, `categoryColor`, `isCompleted`, `reminders`, `isLoading`, `error`.
 
 ## TodoEdit
 
@@ -40,6 +50,6 @@
 
 ## Navigation
 
-목적지는 `TodoList`, `TodoEdit`, `CategoryManagement`다. 화면 간에는 전체 객체보다 ID와 필요한 최소 인자만 전달한다.
+목적지는 `TodoList`, `TodoDetail`, `TodoEdit`, `CategoryManagement`다. 화면 간에는 전체 객체보다 ID와 필요한 최소 인자만 전달한다.
 
 현재 `MainActivity`의 `Greeting`은 초기 템플릿이며 제품 화면이 아니다.

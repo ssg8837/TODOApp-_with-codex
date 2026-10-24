@@ -126,5 +126,21 @@ class DefaultTodoServiceTest {
         assertEquals(DataAccessException::class, repositoryErrorType())
     }
 
+    @Test
+    fun observeByIdEmitsDomainModelWhenFoundAndErrorWhenMissing() = runBlocking {
+        val existing = todo(id = 5L)
+        val repository = FakeTodoRepository(listOf(existing))
+        val service = DefaultTodoService(
+            repository,
+            FakeCategoryRepository(listOf(systemCategory())),
+        )
+
+        val success = service.observeById(5L).first()
+        assertEquals(ServiceResult.Success(existing), success)
+
+        val missing = service.observeById(999L).first()
+        assertEquals(ServiceResult.Failure(ServiceError.TodoNotFound), missing)
+    }
+
     private fun repositoryErrorType() = DataAccessException::class
 }

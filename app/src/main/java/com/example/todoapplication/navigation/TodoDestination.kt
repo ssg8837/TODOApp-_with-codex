@@ -13,8 +13,11 @@ object TodoDestination {
     const val TODO_ID_ARGUMENT = "todoId"
     const val NEW_PATTERN = "todo/new/{$NEW_DATE_ARGUMENT}"
     const val EDIT_PATTERN = "todo/edit/{$TODO_ID_ARGUMENT}"
+    const val DETAIL_PATTERN = "todo/detail/{$TODO_ID_ARGUMENT}"
 
     fun newTodo(date: LocalDate): String = "todo/new/$date"
 
     fun editTodo(todoId: Long): String = "todo/edit/$todoId"
+
+    fun detailTodo(todoId: Long): String = "todo/detail/$todoId"
 }

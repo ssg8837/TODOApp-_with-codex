@@ -22,6 +22,7 @@ interface FeaturePresenter {
 ## 기능별 Presenter
 
 - `TodoListPresenter`: 날짜 상태, TodoService 목록과 CategoryService 목록의 반응형 결합, 화면용 `TodoListItemUiModel` 제공, 사용자 완료 변경 이벤트 전달 및 결과 표시
+- `TodoDetailPresenter`: Route의 TODO ID로 TodoService, CategoryService, ReminderService Flow를 결합하여 읽기 전용 `TodoDetailUiState` 제공, 실시간 DB 변경 반영
 - `TodoEditPresenter`: 신규·기존 화면 상태와 입력값 관리, Service 저장 결과 및 검증 오류 표시
 - `TodoEditPresenter`는 `remindOneDayBefore`, `remindFifteenMinutesBefore`를 관리한다. 수정 시 Service의 Reminder Flow에서 선택을 복원하고, 시간 제거 시 둘 다 해제한다. 저장은 Todo와 선택된 minutesBefore 집합을 하나의 Service 유스케이스로 전달한다.
 - `CategoryPresenter`: 저장 순서의 Category 화면 상태, 색상·재정렬 입력과 Service 결과 표시

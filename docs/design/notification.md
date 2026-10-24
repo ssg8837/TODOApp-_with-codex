@@ -74,7 +74,7 @@ Todo/Reminder 저장
 - 시스템 설정 및 DND 존중: 시스템 알림 설정에서 채널 진동/알림을 끄거나 방해금지(DND) 모드가 활성화된 경우 시스템 정책을 우회하지 않으며, 앱 실행 시 시스템 설정을 강제로 덮어쓰지 않음
 - 기존 채널 보존: 기존 설치 사용자의 설정을 파괴하지 않기 위해 레거시 채널(`todo_reminders`)을 강제로 삭제하지 않고 신규 발화 알림은 `todo_reminders_v2`를 사용
 
-Receiver는 Intent의 Reminder ID와 예약 시각을 키로 사용하되, 알림 표시 직전에 Room을 다시 조회한다. Todo/Reminder 삭제, 완료, 예정 시각 변경이 확인되면 늦게 도착한 broadcast를 무시한다. 알림 선택 시 Todo ID만 전달하여 수정 화면에서 최신 데이터를 다시 읽는다.
+Receiver는 Intent의 Reminder ID와 예약 시각을 키로 사용하되, 알림 표시 직전에 Room을 다시 조회한다. Todo/Reminder 삭제, 완료, 예정 시각 변경이 확인되면 늦게 도착한 broadcast를 무시한다. 알림 선택 시 Todo ID만 전달하여 확인(Detail) 화면으로 이동하고 최신 데이터를 다시 읽는다. 확인 화면에서 필요한 경우 수정 화면으로 이동할 수 있다.
 
 ## 재부팅
 

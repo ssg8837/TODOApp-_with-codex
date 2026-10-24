@@ -35,6 +35,9 @@ interface TodoService {
 
     suspend fun getById(todoId: Long): ServiceResult<Todo>
 
+    fun observeById(todoId: Long): Flow<ServiceResult<Todo>> =
+        error("observeById is not implemented")
+
     fun observeByDate(date: LocalDate): Flow<ServiceResult<List<Todo>>>
 
     fun observeFiltered(

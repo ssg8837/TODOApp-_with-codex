@@ -19,6 +19,8 @@ interface TodoRepository {
 
     suspend fun getById(id: Long): Todo?
 
+    fun observeById(id: Long): Flow<Todo?> = error("observeById is not implemented")
+
     fun observeByDate(date: LocalDate): Flow<List<Todo>>
 
     /** `null` Category는 전체를, [incompleteOnly]는 미완료만 조회함을 뜻한다. */

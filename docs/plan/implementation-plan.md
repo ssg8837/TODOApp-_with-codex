@@ -1030,6 +1030,35 @@ Flow 및 Android 시스템 연동 제약을 KDoc과 필요한 주석으로 문�
 - Hilt/Koin, Network DTO 또는 서버 계층 도입
 - destructive migration 설정
 
+## Phase 14: Reminder Notification 진동
+
+### 목적
+
+Reminder Notification 발화 시 Notification Channel 정책을 통해 기기에서 진동이 발생하도록 한다.
+
+### 구현 상세
+
+- AndroidNotificationChannel 진동 활성화 (`enableVibration(true)`, `DEFAULT_VIBRATION_PATTERN = [0L, 250L, 150L, 250L]`)
+- 기존 설치 앱 대응을 위한 채널 버전 마이그레이션 (`todo_reminders` -> `todo_reminders_v2`)
+- `AndroidManifest.xml`에 `android.permission.VIBRATE` (normal permission) 선언
+- 시스템 설정 및 DND 모드 존중
+
+## Phase 14.1: TODO 확인(Detail) 화면 추가
+
+### 목적
+
+TODO 목록 및 Notification 클릭 시 즉시 편집 화면으로 진입하던 흐름을 개선하여, 내용을 먼저 확인하는 읽기 전용 화면(`TodoDetailScreen`)을 제공하고 필요 시 수정 화면으로 진입할 수 있도록 한다.
+
+### 구현 상세
+
+- `TodoDetailPresenter`, `TodoDetailUiState`, `TodoDetailEvent`, `TodoDetailScreen`, `TodoDetailRoute` 추가
+- `TodoDestination.detailTodo(todoId)` 및 `todo/detail/{todoId}` destination 정의
+- 목록에서 TODO 클릭 시 Detail로 이동, Detail에서 [수정] 클릭 시 Edit으로 이동, [확인] 클릭 시 뒤로 복귀
+- 수정 저장 후 Detail로 복귀하여 최신 DB 상태 자동 반영
+- 수정 화면에서 삭제 시 Detail을 건너뛰고 목록(`TodoDestination.LIST`)으로 안전하게 복귀
+- Notification 클릭 시 `todo/detail/{todoId}`로 진입하도록 Navigation 및 Activity Intent 흐름 갱신
+- Todo 미존재/삭제 시 오류 화면 표시 및 안전한 복귀 지원
+
 ## Phase 완료 보고 형식
 
 ```text

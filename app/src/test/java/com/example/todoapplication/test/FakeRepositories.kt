@@ -49,6 +49,11 @@ class FakeTodoRepository(
         return todos.value.firstOrNull { it.id == id }
     }
 
+    override fun observeById(id: Long): Flow<Todo?> {
+        calls += "observeById"
+        return todos.map { values -> values.firstOrNull { it.id == id } }
+    }
+
     override fun observeByDate(date: LocalDate): Flow<List<Todo>> {
         calls += "observeByDate"
         return todos.map { values -> values.filter { it.date == date } }
